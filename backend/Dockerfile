@@ -22,5 +22,7 @@ COPY site/ /app/site/
 EXPOSE 5000
 
 # Default to the web role; docker-compose.yml/render.yaml override this
-# command for the worker and beat services.
-CMD ["sh", "-c", "alembic upgrade head && gunicorn -b 0.0.0.0:5000 -w 2 wsgi:app"]
+# command for the worker and beat services. Migrations and seeding are
+# one-shot steps run before gunicorn spawns any workers -- see
+# seed_startup.py for why seeding can't just happen at wsgi.py import time.
+CMD ["sh", "-c", "alembic upgrade head && python seed_startup.py && gunicorn -b 0.0.0.0:5000 -w 2 wsgi:app"]

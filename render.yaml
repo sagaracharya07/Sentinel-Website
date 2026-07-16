@@ -46,7 +46,10 @@ services:
     runtime: docker
     dockerfilePath: backend/Dockerfile
     dockerContext: .
-    dockerCommand: celery -A celery_app worker --loglevel=info
+    # python -m celery, not the bare console-script -- see the matching
+    # comment in docker-compose.yml for why (ModuleNotFoundError: no
+    # module named 'app' otherwise).
+    dockerCommand: python -m celery -A celery_app worker --loglevel=info
     plan: starter
     envVars:
       - key: SENTINEL_ENV
@@ -63,7 +66,7 @@ services:
     runtime: docker
     dockerfilePath: backend/Dockerfile
     dockerContext: .
-    dockerCommand: celery -A celery_app beat --loglevel=info
+    dockerCommand: python -m celery -A celery_app beat --loglevel=info
     plan: starter
     numInstances: 1 # exactly one -- see the beat comment in docker-compose.yml
     envVars:

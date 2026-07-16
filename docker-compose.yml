@@ -32,6 +32,14 @@ services:
     ports:
       - "5000:5000"
     env_file: [.env.docker]
+    volumes:
+      # Shared with worker/beat -- retrain_task (tasks.py) writes new model
+      # versions to ml/artifacts/ from the worker container; without a
+      # shared volume here, web/worker/beat each get their own independent
+      # copy baked into the image and a retrained model would silently
+      # never reach the process serving live traffic. Found by actually
+      # running a retrain job end-to-end, not by inspection.
+      - sentinel_ml_artifacts:/app/backend/ml/artifacts
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -45,8 +53,15 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    command: celery -A celery_app worker --loglevel=info
+    # `python -m celery` (not the bare `celery` console-script) -- the
+    # console-script entry point doesn't add the working directory to
+    # sys.path, so `from app import app` inside tasks.py fails with
+    # ModuleNotFoundError under the bare command. `python -m` does add
+    # cwd, same as how gunicorn resolves wsgi:app for the web service.
+    command: python -m celery -A celery_app worker --loglevel=info
     env_file: [.env.docker]
+    volumes:
+      - sentinel_ml_artifacts:/app/backend/ml/artifacts
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -58,11 +73,14 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    command: celery -A celery_app beat --loglevel=info
+    command: python -m celery -A celery_app beat --loglevel=info
     env_file: [.env.docker]
+    volumes:
+      - sentinel_ml_artifacts:/app/backend/ml/artifacts
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
 
 volumes:
   sentinel_pgdata:
+  sentinel_ml_artifacts:

@@ -68,6 +68,18 @@ def build_feature_matrix(df, vectorizer=None, scaler=None, fit=True):
 
 
 def next_version():
+    """
+    Takes the max of two sources -- the artifacts directory AND the
+    model_versions table, when a DB/app context is available -- rather
+    than trusting the filesystem alone. Those two can drift (verified
+    while testing the multi-container Docker setup: retraining from a
+    worker container whose ml/artifacts/ wasn't yet on a volume shared
+    with web left a model_versions row for a version whose files never
+    existed anywhere durable; the next retrain recomputed the same
+    version name from the filesystem and hit a duplicate-key crash on
+    the now-stale DB row). Falls back to filesystem-only when there's no
+    app context, e.g. the standalone `python -m ml.train` CLI path.
+    """
     os.makedirs(ARTIFACTS_DIR, exist_ok=True)
     existing = [d for d in os.listdir(ARTIFACTS_DIR) if d.startswith("v")]
     nums = []
@@ -76,6 +88,19 @@ def next_version():
             nums.append(int(d[1:]))
         except ValueError:
             pass
+
+    try:
+        from models import ModelVersion
+        for row in ModelVersion.query.with_entities(ModelVersion.version).all():
+            v = row[0]
+            if v.startswith("v"):
+                try:
+                    nums.append(int(v[1:]))
+                except ValueError:
+                    pass
+    except Exception:
+        pass  # no app/DB context (standalone CLI) -- filesystem-only is fine there
+
     return f"v{(max(nums) + 1) if nums else 1}"
 
 

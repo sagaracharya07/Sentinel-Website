@@ -14,6 +14,8 @@ can also be run standalone: `python3 seed_db.py`.
 import json
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy.exc import IntegrityError
+
 from extensions import db
 from models import User, Scan, ModelVersion
 from auth import create_user
@@ -21,10 +23,22 @@ from ml import infer
 
 
 def seed_users():
+    """
+    Guarded by count() == 0 to skip the common case cheaply, but that
+    check-then-act isn't atomic -- with multiple web replicas starting
+    concurrently (see seed_startup.py's docstring for how this was found:
+    two gunicorn workers racing on the same INSERT crashed the whole
+    process), two replicas could both pass the check before either
+    commits. Catching the resulting UniqueViolation and rolling back
+    treats "someone else already seeded this" as success, not a crash.
+    """
     if User.query.count() == 0:
-        create_user("admin", "admin123", role="admin")
-        create_user("user", "user123", role="user")
-        print("Seeded demo accounts: admin/admin123 (admin), user/user123 (user)")
+        try:
+            create_user("admin", "admin123", role="admin")
+            create_user("user", "user123", role="user")
+            print("Seeded demo accounts: admin/admin123 (admin), user/user123 (user)")
+        except IntegrityError:
+            db.session.rollback()
 
 
 def seed_model_version_row():
@@ -44,7 +58,12 @@ def seed_model_version_row():
         n_feedback_folded_in=meta.get("n_feedback_folded_in", 0),
         notes=meta.get("notes", ""), is_current=True,
     ))
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # Another replica seeded this exact version row first -- fine,
+        # that's the same outcome we were trying to reach.
+        db.session.rollback()
 
 
 SAMPLE_EMAILS = [
