@@ -1,0 +1,38 @@
+{% extends "base_marketing.html" %}
+{% block title %}Security — Sentinel AI{% endblock %}
+{% block description %}What Sentinel AI actually does to keep accounts and email content safe.{% endblock %}
+{% block content %}
+<section class="section content-page">
+  <div class="wrap content-prose">
+    <span class="eyebrow">Security</span>
+    <h1 style="font-size:2.2rem;margin-top:10px;margin-bottom:10px">What's actually implemented, not just claimed.</h1>
+    <p>For a platform whose entire purpose is spotting security threats, it matters that its own security practices are real and checkable — so here's what's actually running, split from what's a deployment-environment responsibility.</p>
+
+    <h2>Authentication &amp; access control</h2>
+    <ul>
+      <li>Passwords are hashed with Werkzeug's PBKDF2 implementation — never stored or logged in plaintext.</li>
+      <li>Sessions use signed, HttpOnly, SameSite cookies; the session secret must be a real, unique value in production or the application refuses to start.</li>
+      <li>Roles (user/admin) are enforced server-side on every request. There is no client-side role selector — a request either has the right session or it doesn't.</li>
+      <li>Self-registration can only ever create a standard user account; administrator access is never client-assignable.</li>
+      <li>Login, registration, password reset, and the contact form are all rate-limited to slow down abuse.</li>
+    </ul>
+
+    <h2>Data handling</h2>
+    <ul>
+      <li>Email bodies are automatically redacted 24 hours after a scan by a real background job — not a policy described in a document.</li>
+      <li>Every scan, login, admin action, retrain, and mailbox sync is written to an audit log.</li>
+      <li>Mailbox access is read-mostly: the only write actions are a reversible quarantine-folder move or an in-place flag, never a permanent delete.</li>
+    </ul>
+
+    <h2>Application security</h2>
+    <ul>
+      <li>A Content-Security-Policy and Strict-Transport-Security header are set on every response.</li>
+      <li>Password-reset and email-verification tokens are single-use, time-limited, and generated with a cryptographically secure random source.</li>
+      <li>Password-reset requests return an identical response whether or not an email is registered, to prevent account enumeration.</li>
+    </ul>
+
+    <h2>Deployment-environment responsibilities</h2>
+    <p>TLS/HTTPS termination is handled by whatever reverse proxy or hosting platform sits in front of the application (Render, nginx, Caddy, etc.) — this is the standard pattern for an app built this way, and is called out here explicitly rather than faked with a self-signed certificate.</p>
+  </div>
+</section>
+{% endblock %}

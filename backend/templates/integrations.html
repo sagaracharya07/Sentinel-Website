@@ -1,0 +1,41 @@
+{% extends "base_marketing.html" %}
+{% block title %}Integrations — Sentinel AI{% endblock %}
+{% block description %}Connect Sentinel AI to a real mailbox over IMAP — Gmail, Outlook, or Yahoo.{% endblock %}
+{% block content %}
+<section class="section" style="padding-bottom:20px">
+  <div class="wrap">
+    <span class="eyebrow">Integrations</span>
+    <h1 style="font-size:2.4rem;margin-top:10px;max-width:640px">Connects to the mailbox you already use.</h1>
+    <p style="color:var(--paper-muted);max-width:600px;margin-top:14px;line-height:1.6">Sentinel AI reads mail over standard IMAP, so setup takes an app password, not a migration. No plugin to install in the mail client itself.</p>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="wrap grid-3">
+    <div class="feat-card hud-frame">
+      <div class="fico">G</div>
+      <h4>Gmail</h4>
+      <p>Turn on 2-Step Verification, generate an App Password under Google Account settings, and use <code style="color:var(--scan)">imap.gmail.com</code> as the host. Recommended for testing with a throwaway account first.</p>
+    </div>
+    <div class="feat-card hud-frame">
+      <div class="fico">O</div>
+      <h4>Outlook / Office 365</h4>
+      <p>Use <code style="color:var(--scan)">outlook.office365.com</code> as the host. An app password is required the same way if two-factor authentication is enabled on the account.</p>
+    </div>
+    <div class="feat-card hud-frame">
+      <div class="fico">Y</div>
+      <h4>Yahoo Mail</h4>
+      <p>Use <code style="color:var(--scan)">imap.mail.yahoo.com</code> as the host, with an app password generated from Yahoo's account security settings.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section content-page" style="padding-top:0">
+  <div class="wrap content-prose">
+    <h2>What Sentinel AI does with access</h2>
+    <p>Read access is used to pull new messages for classification. The only write actions it ever performs are moving a high-risk message into a dedicated quarantine folder it creates itself, or flagging a medium-risk message in place — both fully reversible from any ordinary mail client, and both logged. It never deletes mail permanently and never sends mail on your behalf from that mailbox.</p>
+    <h2>One mailbox, on purpose</h2>
+    <p>The current build watches a single configured mailbox — representing an organisation's shared, protected inbox rather than every employee's personal account. Monitoring multiple mailboxes from one deployment is a planned extension, not something this build claims to do today.</p>
+  </div>
+</section>
+{% endblock %}

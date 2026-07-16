@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Log in — Sentinel AI</title>
-<link rel="stylesheet" href="css/styles.css">
+<title>{% block title %}Sentinel AI{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/styles.css') }}">
 <style>
   body{min-height:100vh;display:flex;flex-direction:column}
   .login-wrap{
@@ -22,7 +22,7 @@
   label.field-label{display:block;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;
     letter-spacing:.05em;color:var(--paper-muted);margin-bottom:6px;font-weight:600}
   .field{margin-bottom:18px}
-  input[type=text], input[type=password]{
+  input[type=text], input[type=password], input[type=email]{
     width:100%;border:1px solid var(--paper-line);border-radius:var(--radius-s);
     padding:12px 14px;font-family:var(--body);font-size:.92rem;background:var(--paper-1);color:var(--paper-text);
   }
@@ -31,15 +31,20 @@
   .err-msg{color:var(--threat);font-size:.82rem;font-family:var(--mono);margin-top:14px;display:none;
     background:var(--threat-bg);border:1px solid var(--threat-line);border-radius:var(--radius-s);padding:10px 12px}
   .err-msg.show{display:block}
+  .success-msg{color:var(--safe);font-size:.82rem;font-family:var(--mono);margin-top:14px;display:none;
+    background:var(--safe-bg);border:1px solid var(--safe-line);border-radius:var(--radius-s);padding:10px 12px}
+  .success-msg.show{display:block}
   .demo-hint{
     margin-top:24px;padding:14px 16px;background:var(--paper-1);border:1px dashed var(--paper-line);
     border-radius:var(--radius-s);font-size:.78rem;color:var(--paper-muted);line-height:1.7;
   }
   .demo-hint b{color:var(--paper-text);font-family:var(--mono)}
   .demo-hint .role-row{display:flex;justify-content:space-between;font-family:var(--mono)}
+  .auth-links{display:flex;justify-content:space-between;margin-top:14px;font-size:.82rem}
   .back-link{display:block;text-align:center;margin-top:18px;font-size:.82rem;color:var(--paper-muted)}
   .back-link:hover{color:var(--scan)}
 </style>
+{% block extra_style %}{% endblock %}
 </head>
 <body>
 
@@ -48,34 +53,12 @@
 <div class="login-wrap">
   <div class="login-card hud-frame">
     <div class="login-brand"><span class="dot"></span> Sentinel<span class="brand-ai">AI</span></div>
-    <div class="login-sub">AI Phishing Detection Platform — sign in to continue</div>
-
-    <form id="loginForm" autocomplete="on">
-      <div class="field">
-        <label class="field-label" for="username">Username</label>
-        <input type="text" id="username" name="username" autocomplete="username" required>
-      </div>
-      <div class="field">
-        <label class="field-label" for="password">Password</label>
-        <input type="password" id="password" name="password" autocomplete="current-password" required>
-      </div>
-      <button type="submit" class="btn btn-primary login-btn" id="loginBtn">Log in</button>
-      <div class="err-msg" id="errMsg"></div>
-    </form>
-
-    <div class="demo-hint">
-      This is an academic capstone build — two seeded demo accounts are provided
-      for marking/demo purposes. Your role (User or Admin) is determined by the
-      account itself and enforced on every API request, not chosen at login.
-      <div class="role-row" style="margin-top:8px"><span>Admin console access:</span><b>admin / admin123</b></div>
-      <div class="role-row"><span>Standard scanner access:</span><b>user / user123</b></div>
-    </div>
-
-    <a href="index.html" class="back-link">← Back to overview</a>
+    {% block content %}{% endblock %}
+    <a href="/" class="back-link">← Back to overview</a>
   </div>
 </div>
 
-<script src="js/api.js"></script>
-<script src="js/login.js"></script>
+<script src="{{ url_for('static_files', filename='js/api.js') }}"></script>
+{% block extra_scripts %}{% endblock %}
 </body>
 </html>

@@ -1,0 +1,30 @@
+{% extends "base_marketing.html" %}
+{% block title %}Terms of Service — Sentinel AI{% endblock %}
+{% block description %}The terms governing use of Sentinel AI.{% endblock %}
+{% block content %}
+<section class="section content-page">
+  <div class="wrap content-prose">
+    <span class="eyebrow">Legal</span>
+    <h1 style="font-size:2.2rem;margin:10px 0 8px">Terms of Service</h1>
+    <p style="font-size:.82rem;color:var(--paper-muted)">Last updated 2026.</p>
+
+    <h2>Use of the service</h2>
+    <p>Sentinel AI is provided to help identify potentially malicious email. Classifications are produced by a statistical model and are not guaranteed to be correct in every case — always use judgment alongside any verdict shown, particularly for messages near the decision boundary between risk levels.</p>
+
+    <h2>Mailbox access</h2>
+    <p>If you connect a mailbox, you confirm you have the right to authorise access to it. We recommend using an app password rather than a primary account password, and a throwaway/test account while first configuring the integration.</p>
+
+    <h2>Acceptable use</h2>
+    <p>You agree not to use the service to attempt to disrupt, overload, or gain unauthorized access to the platform or any account other than your own.</p>
+
+    <h2>No warranty</h2>
+    <p>The service is provided as-is. We do not warrant that detection will be error-free or that it will catch every phishing attempt — false negatives and false positives are a known, documented characteristic of any statistical classifier, not a hidden limitation.</p>
+
+    <h2>Account termination</h2>
+    <p>We may suspend an account for abuse of the platform (excessive automated requests, attempts to access another user's data, etc). You may close your account at any time by contacting us.</p>
+
+    <h2>Changes to these terms</h2>
+    <p>We'll update this page if these terms change materially. Continued use of the service after a change constitutes acceptance of the updated terms.</p>
+  </div>
+</section>
+{% endblock %}

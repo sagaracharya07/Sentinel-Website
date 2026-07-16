@@ -48,6 +48,23 @@ services:
       timeout: 5s
       retries: 10
 
+  # Fake SMTP catcher for local verification of the outbound-email flow
+  # (signup verification, password reset, contact form -- see
+  # backend/mail/email_client.py) without needing real provider
+  # credentials. No auth, no TLS -- see MAIL_USE_TLS/MAIL_USE_AUTH in
+  # .env.docker.example. Web UI at http://localhost:8025, REST API at
+  # /api/v1/messages for scripted verification.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8025/api/v1/info"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   web:
     build:
       context: .
@@ -59,6 +76,7 @@ services:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
+      mailpit: { condition: service_healthy }
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/public/demo-scan"]
       interval: 10s
@@ -80,6 +98,7 @@ services:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
+      mailpit: { condition: service_healthy }
 
   # Exactly one beat instance -- it's the single scheduler that enqueues
   # purge/mailbox-sync jobs (see celery_app.py). Never scale this service;
@@ -94,6 +113,7 @@ services:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
+      mailpit: { condition: service_healthy }
 
 volumes:
   sentinel_pgdata:

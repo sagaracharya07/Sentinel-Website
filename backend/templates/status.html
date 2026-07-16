@@ -1,0 +1,35 @@
+{% extends "base_marketing.html" %}
+{% block title %}Status — Sentinel AI{% endblock %}
+{% block description %}Current platform status.{% endblock %}
+{% block content %}
+<section class="section content-page">
+  <div class="wrap" style="max-width:640px">
+    <span class="eyebrow">Status</span>
+    <h1 style="font-size:2.2rem;margin:10px 0 8px">All systems operational</h1>
+    <p style="color:var(--paper-muted);margin-bottom:30px">This page is illustrative — it isn't yet wired to a real uptime-monitoring service, so treat it as a placeholder for where live status would appear, not a monitored SLA.</p>
+
+    <div class="panel panel-pad hud-frame">
+      <div class="status-row">
+        <span>API &amp; web application</span>
+        <span class="status-ok"><span class="status-dot"></span>Operational</span>
+      </div>
+      <div class="status-row">
+        <span>Email scanning</span>
+        <span class="status-ok"><span class="status-dot"></span>Operational</span>
+      </div>
+      <div class="status-row">
+        <span>Mailbox sync (background job)</span>
+        <span class="status-ok"><span class="status-dot"></span>Operational</span>
+      </div>
+      <div class="status-row">
+        <span>Model retraining</span>
+        <span class="status-ok"><span class="status-dot"></span>Operational</span>
+      </div>
+      <div class="status-row">
+        <span>Outbound email</span>
+        <span class="status-ok"><span class="status-dot"></span>Operational</span>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

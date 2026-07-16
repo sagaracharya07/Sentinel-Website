@@ -1,10 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scan an email — Sentinel AI</title>
-<link rel="stylesheet" href="css/styles.css">
+{% extends "base_app.html" %}
+{% block title %}Scan an email — Sentinel AI{% endblock %}
+{% block extra_style %}
 <style>
   .scan-layout{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;margin-top:28px}
   @media (max-width:980px){ .scan-layout{grid-template-columns:1fr} }
@@ -72,20 +68,8 @@
   .status-Flagged{background:var(--warn-bg);color:var(--warn)}
   .status-Quarantined{background:var(--threat-bg);color:var(--threat)}
 </style>
-</head>
-<body>
-<nav class="topnav">
-  <div class="wrap">
-    <a href="index.html" class="brand"><span class="dot"></span> Sentinel<span class="brand-ai">AI</span></a>
-    <div class="navlinks">
-      <a href="index.html">Overview</a>
-      <a href="scan.html" class="active">Scan Email</a>
-      <a href="admin.html">Admin Console</a>
-    </div>
-    <div id="userBadge" class="user-badge"></div>
-  </div>
-</nav>
-
+{% endblock %}
+{% block content %}
 <div class="app-shell">
   <div class="circuit-bg app-mask"></div>
   <div class="current-pulses">
@@ -179,30 +163,7 @@
     </div>
   </div>
 </div>
-
-<footer>
-  <div class="wrap">
-    <div>
-      <div class="foot-brand">Sentinel<span class="brand-ai">AI</span></div>
-      <p style="max-width:260px;font-size:.85rem;margin-top:10px;opacity:.7">AI Phishing Detection Platform — NIT3004 IT Capstone Project 2, Victoria University.</p>
-    </div>
-    <div class="foot-cols">
-      <div class="foot-col">
-        <h4>Product</h4>
-        <a href="index.html">Overview</a>
-        <a href="scan.html">Scan email</a>
-        <a href="admin.html">Admin console</a>
-      </div>
-    </div>
-  </div>
-  <div class="wrap foot-bottom">© 2026 Sentinel AI — built for NIT3004 IT Capstone Project 2.</div>
-</footer>
-
-<script src="js/lightning.js"></script>
-<script src="js/api.js"></script>
-<script src="js/auth-guard.js"></script>
-<script src="js/classifier.js"></script>
-<script src="js/hud.js"></script>
-<script src="js/scan.js"></script>
-</body>
-</html>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/scan.js') }}"></script>
+{% endblock %}

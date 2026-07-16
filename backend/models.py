@@ -24,8 +24,21 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False, default="user")  # 'user' | 'admin'
     created_at = db.Column(db.DateTime, default=utcnow)
 
+    # Self-serve registration (nullable so the seeded admin/user demo
+    # accounts, which have no email, are unaffected by the verification
+    # gate in auth.py's verify_login()).
+    email = db.Column(db.String(255), unique=True, nullable=True)
+    email_verified = db.Column(db.Boolean, nullable=False, default=False)
+    verification_token = db.Column(db.String(64), nullable=True)
+    verification_token_expires = db.Column(db.DateTime, nullable=True)
+    reset_token = db.Column(db.String(64), nullable=True)
+    reset_token_expires = db.Column(db.DateTime, nullable=True)
+
     def to_public(self):
-        return {"username": self.username, "role": self.role}
+        return {
+            "username": self.username, "role": self.role,
+            "email": self.email, "email_verified": self.email_verified,
+        }
 
 
 class Scan(db.Model):

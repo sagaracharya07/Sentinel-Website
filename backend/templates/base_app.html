@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Sentinel AI{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/styles.css') }}">
+{% block extra_style %}{% endblock %}
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="dot"></span> Sentinel<span class="brand-ai">AI</span></a>
+    <div class="navlinks">
+      <a href="/" class="{{ 'active' if active_page == 'home' }}">Overview</a>
+      <a href="/scan.html" class="{{ 'active' if active_page == 'scan' }}">Scan Email</a>
+      <a href="/admin.html" class="{{ 'active' if active_page == 'admin' }}">Admin Console</a>
+      <a href="/account.html" class="{{ 'active' if active_page == 'account' }}">Account</a>
+    </div>
+    <div id="userBadge" class="user-badge"></div>
+  </div>
+</nav>
+
+{% block content %}{% endblock %}
+
+<footer>
+  <div class="wrap">
+    <div>
+      <div class="foot-brand">Sentinel<span class="brand-ai">AI</span></div>
+      <p style="max-width:260px;font-size:.85rem;margin-top:10px;opacity:.7">AI Phishing Detection Platform — NIT3004 IT Capstone Project 2, Victoria University.</p>
+    </div>
+    <div class="foot-cols">
+      <div class="foot-col">
+        <h4>Product</h4>
+        <a href="/">Overview</a>
+        <a href="/scan.html">Scan email</a>
+        <a href="/admin.html">Admin console</a>
+      </div>
+      <div class="foot-col">
+        <h4>Support</h4>
+        <a href="/faq.html">FAQ</a>
+        <a href="/contact.html">Contact</a>
+      </div>
+    </div>
+  </div>
+  <div class="wrap foot-bottom">© 2026 Sentinel AI — built for NIT3004 IT Capstone Project 2.</div>
+</footer>
+
+<script src="{{ url_for('static_files', filename='js/lightning.js') }}"></script>
+<script src="{{ url_for('static_files', filename='js/api.js') }}"></script>
+<script src="{{ url_for('static_files', filename='js/auth-guard.js') }}"></script>
+<script src="{{ url_for('static_files', filename='js/classifier.js') }}"></script>
+<script src="{{ url_for('static_files', filename='js/hud.js') }}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,56 @@
+{% extends "base_marketing.html" %}
+{% block title %}Changelog — Sentinel AI{% endblock %}
+{% block description %}What's actually shipped, in order.{% endblock %}
+{% block content %}
+<section class="section content-page">
+  <div class="wrap content-prose">
+    <span class="eyebrow">Changelog</span>
+    <h1 style="font-size:2.2rem;margin:10px 0 30px">What's actually shipped</h1>
+
+    <div class="changelog-entry">
+      <div class="changelog-date">2026</div>
+      <div>
+        <span class="changelog-tag feature">Feature</span>
+        <h3 style="margin-top:0">Full site revamp + self-serve accounts</h3>
+        <p>Sign-up, email verification, and password reset, backed by real outbound email. Ten-plus new pages (Features, Pricing, Security, Integrations, and more) sharing one consistent template instead of hand-duplicated pages.</p>
+      </div>
+    </div>
+
+    <div class="changelog-entry">
+      <div class="changelog-date">2026</div>
+      <div>
+        <span class="changelog-tag infra">Infra</span>
+        <h3 style="margin-top:0">S3-compatible object storage for model artifacts</h3>
+        <p>Retrained models are now handed off between the background worker and the web service through object storage, so a new model reaches production traffic correctly even when they run as fully separate services.</p>
+      </div>
+    </div>
+
+    <div class="changelog-entry">
+      <div class="changelog-date">2026</div>
+      <div>
+        <span class="changelog-tag infra">Infra</span>
+        <h3 style="margin-top:0">Postgres, Celery, and Docker</h3>
+        <p>Migrated off single-file SQLite and in-process background threads onto Postgres and a Celery/Redis job queue, with Alembic-managed migrations, a full Docker Compose setup for local development, and a Render deployment configuration.</p>
+      </div>
+    </div>
+
+    <div class="changelog-entry">
+      <div class="changelog-date">2026</div>
+      <div>
+        <span class="changelog-tag security">Security</span>
+        <h3 style="margin-top:0">Security hardening pass</h3>
+        <p>Closed an insecure default session secret, added rate limiting on authentication and retraining endpoints, tightened security headers (CSP/HSTS), and gated demo-account seeding out of production entirely.</p>
+      </div>
+    </div>
+
+    <div class="changelog-entry">
+      <div class="changelog-date">2026</div>
+      <div>
+        <span class="changelog-tag model">Model</span>
+        <h3 style="margin-top:0">v1 model trained</h3>
+        <p>Initial Random Forest classifier trained on ~37,700 labelled emails across four public corpora — 96.1% accuracy, 94.9% precision, 96.8% recall on a held-out test split.</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

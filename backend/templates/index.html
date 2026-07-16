@@ -1,11 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sentinel AI — AI Phishing Detection Platform</title>
-<meta name="description" content="Sentinel AI scans email in real time, explains exactly why a message is flagged, and quarantines threats before they reach the inbox.">
-<link rel="stylesheet" href="css/styles.css">
+{% extends "base_marketing.html" %}
+{% block title %}Sentinel AI — AI Phishing Detection Platform{% endblock %}
+{% block description %}Sentinel AI scans email in real time, explains exactly why a message is flagged, and quarantines threats before they reach the inbox.{% endblock %}
+{% block extra_style %}
 <style>
   /* ---- landing-only styles ---- */
   .hero{
@@ -98,61 +94,12 @@
   .stat-band .sb-item b{font-family:var(--display);font-size:2.1rem;display:block;color:#fff}
   .stat-band .sb-item span{font-size:.86rem;color:var(--ink-muted)}
 
-  /* how it works */
-  .pipeline{display:flex;align-items:stretch;gap:0;margin-top:48px;flex-wrap:wrap}
-  .pipe-step{
-    flex:1;min-width:150px;background:var(--paper-2);border:1px solid var(--paper-line);
-    padding:24px 20px;position:relative;
-  }
-  .pipe-step:first-child{border-radius:var(--radius-m) 0 0 var(--radius-m)}
-  .pipe-step:last-child{border-radius:0 var(--radius-m) var(--radius-m) 0}
-  @media (max-width:820px){
-    .pipe-step{border-radius:var(--radius-m) !important;flex:1 1 100%}
-  }
-  .pipe-step .pk{font-family:var(--mono);font-size:.7rem;color:var(--scan-2);text-transform:uppercase;letter-spacing:.06em}
-  .pipe-step h4{margin-top:8px;font-size:1rem}
-  .pipe-step p{margin-top:6px;font-size:.86rem;color:var(--paper-muted);line-height:1.5}
-  .pipe-arrow{display:flex;align-items:center;color:var(--paper-muted);padding:0 6px;font-size:1.2rem}
-  @media (max-width:820px){ .pipe-arrow{display:none} }
-
-  /* feature grid */
-  .feat-card{background:var(--paper-2);border:1px solid var(--paper-line);border-radius:var(--radius-m);padding:26px;box-shadow:var(--shadow-1)}
-  .feat-card .fico{width:38px;height:38px;border-radius:10px;background:var(--ink-0);color:var(--scan);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;margin-bottom:16px}
-  .feat-card h4{font-size:1.02rem;margin-bottom:8px}
-  .feat-card p{font-size:.9rem;color:var(--paper-muted);line-height:1.55}
-
-  /* compare table */
-  .compare-wrap{overflow-x:auto;border:1px solid var(--paper-line);border-radius:var(--radius-m);background:var(--paper-2)}
-  .compare{min-width:680px}
-  .compare th:first-child, .compare td:first-child{position:sticky;left:0;background:var(--paper-2)}
-  .compare td.yes{color:var(--safe);font-weight:700}
-  .compare td.no{color:var(--paper-muted)}
-  .compare th.us{color:var(--scan-2)}
-
-  .cta-band{
-    background:linear-gradient(135deg, var(--ink-0), #0C1730 60%);
-    border-radius:var(--radius-l);padding:64px 48px;text-align:center;color:var(--ink-text);
-    margin:0 auto;
-  }
-  .cta-band h2{color:#fff;font-size:2rem;margin-bottom:14px}
-  .cta-band p{color:var(--ink-muted);max-width:520px;margin:0 auto 28px}
+  /* .pipeline/.feat-card/.compare/.cta-band now live in styles.css --
+     shared with how-it-works.html/features.html/pricing.html instead of
+     duplicated per page. */
 </style>
-</head>
-<body>
-
-<nav class="topnav">
-  <div class="wrap">
-    <a href="index.html" class="brand"><span class="dot"></span> Sentinel<span class="brand-ai">AI</span></a>
-    <div class="navlinks">
-      <a href="index.html" class="active">Overview</a>
-      <a href="scan.html">Scan Email</a>
-      <a href="admin.html">Admin Console</a>
-      <a href="login.html">Log in</a>
-    </div>
-    <a href="scan.html" class="nav-cta">Launch scanner →</a>
-  </div>
-</nav>
-
+{% endblock %}
+{% block content %}
 <header class="hero">
   <div class="circuit-bg hero-mask"></div>
   <div class="current-pulses">
@@ -173,8 +120,8 @@
       <h1>Catch phishing before it reaches an inbox — and show <em>exactly</em> why.</h1>
       <p class="lede">Sentinel AI sits in front of your mail server, scores every incoming message with an NLP feature pipeline, and quarantines high-risk email automatically — with plain-language reasons behind every decision, not a black box.</p>
       <div class="hero-ctas">
-        <a href="scan.html" class="btn btn-primary">Try a live scan</a>
-        <a href="admin.html" class="btn btn-ghost">View admin console</a>
+        <a href="/signup.html" class="btn btn-primary">Start free</a>
+        <a href="/scan.html" class="btn btn-ghost">Try a live scan</a>
       </div>
       <div class="hero-stats">
         <div class="stat"><b>&lt;2s</b><span>per-email analysis</span></div>
@@ -286,40 +233,14 @@
       <div style="position:relative;z-index:2">
       <span class="eyebrow">Get started</span>
       <h2>See a suspicious email for what it is.</h2>
-      <p>Paste any email into the scanner and get an instant, explained verdict — no account or setup required for this demo build.</p>
-      <a href="scan.html" class="btn btn-primary">Open the scanner</a>
+      <p>Create a free account or paste an email into the scanner right now — get an instant, explained verdict.</p>
+      <a href="/signup.html" class="btn btn-primary">Create free account</a>
+      <a href="/scan.html" class="btn btn-ghost">Try without signing up</a>
       </div>
     </div>
   </div>
 </section>
-
-<footer>
-  <div class="wrap">
-    <div>
-      <div class="foot-brand">Sentinel<span class="brand-ai">AI</span></div>
-      <p style="max-width:260px;font-size:.85rem;margin-top:10px;opacity:.7">AI Phishing Detection Platform — NIT3004 IT Capstone Project 2, Victoria University.</p>
-    </div>
-    <div class="foot-cols">
-      <div class="foot-col">
-        <h4>Product</h4>
-        <a href="index.html">Overview</a>
-        <a href="scan.html">Scan email</a>
-        <a href="admin.html">Admin console</a>
-      </div>
-      <div class="foot-col">
-        <h4>Project</h4>
-        <a href="#">Capstone proposal</a>
-        <a href="#">Team</a>
-      </div>
-    </div>
-  </div>
-  <div class="wrap foot-bottom">© 2026 Sentinel AI — built for NIT3004 IT Capstone Project 2.</div>
-</footer>
-
-<script src="js/lightning.js"></script>
-<script src="js/api.js"></script>
-<script src="js/classifier.js"></script>
-<script src="js/hud.js"></script>
-<script src="js/landing.js"></script>
-</body>
-</html>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/landing.js') }}"></script>
+{% endblock %}

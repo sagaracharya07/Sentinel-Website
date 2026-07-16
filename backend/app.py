@@ -13,6 +13,8 @@ Run:
 Then open http://localhost:5000
 """
 import os
+import re
+import html
 import json
 import random
 import string
@@ -21,17 +23,21 @@ from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 load_dotenv()  # loads backend/.env if present (real mailbox credentials, secret key, etc.)
 
-from flask import Flask, request, jsonify, session, send_from_directory
+from flask import Flask, request, jsonify, session, send_from_directory, redirect, render_template
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from werkzeug.security import generate_password_hash
 
 from extensions import db
 from models import Scan, Feedback, ModelVersion, AuditLog, User, MailboxStatus
-from auth import verify_login, login_required, admin_required, current_actor, log_action
+from auth import verify_login, login_required, admin_required, current_actor, log_action, create_user, generate_token
 from ml import infer
 from mailbox.imap_client import MailboxConfig, MailboxError, test_connection as mailbox_test_connection
 from mailbox.sync import sync_mailbox
 from db_config import resolve_database_uri
+from mail.email_client import send_email, public_base_url
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "..", "site")
@@ -113,19 +119,40 @@ def set_security_headers(resp):
 
 
 # ---------------------------------------------------------------------------
-# Static front-end (index.html, scan.html, admin.html, login.html, css/js)
+# Front-end: HTML pages are Jinja2 templates (backend/templates/) sharing
+# base_marketing.html/base_app.html/base_auth.html for nav/footer instead
+# of each page hand-duplicating that markup (see the plan doc -- this
+# became untenable once the site grew past ~4 pages). CSS/JS/images stay
+# static files served from site/, unchanged. `active_page` just drives
+# which nav link gets the .active class in the base templates.
 # ---------------------------------------------------------------------------
+TEMPLATE_PAGES = {
+    "index.html": {"active_page": "home"},
+    "login.html": {}, "signup.html": {}, "forgot-password.html": {}, "reset-password.html": {},
+    "scan.html": {"active_page": "scan"}, "admin.html": {"active_page": "admin"},
+    "account.html": {"active_page": "account"},
+    "features.html": {"active_page": "features"}, "how-it-works.html": {"active_page": "how-it-works"},
+    "pricing.html": {"active_page": "pricing"}, "about.html": {"active_page": "about"},
+    "contact.html": {"active_page": "contact"}, "faq.html": {}, "privacy.html": {}, "terms.html": {},
+    "integrations.html": {}, "changelog.html": {}, "security.html": {}, "resources.html": {}, "status.html": {},
+}
+
+
 @app.route("/")
 def root():
-    return send_from_directory(STATIC_DIR, "index.html")
+    return render_template("index.html", active_page="home")
 
 
 @app.route("/<path:filename>")
 def static_files(filename):
+    if filename.startswith("api/"):
+        return jsonify({"error": "not found"}), 404
+    if filename in TEMPLATE_PAGES:
+        return render_template(filename, **TEMPLATE_PAGES[filename])
     full = os.path.join(STATIC_DIR, filename)
     if os.path.isfile(full):
         return send_from_directory(STATIC_DIR, filename)
-    return jsonify({"error": "not found"}), 404
+    return render_template("404.html"), 404
 
 
 # ---------------------------------------------------------------------------
@@ -201,10 +228,150 @@ def login():
     if not user:
         log_action(username or "unknown", "login_failed")
         return jsonify({"error": "Invalid username or password"}), 401
+    # Self-registered accounts (have an email) must verify it first; seeded
+    # demo accounts (no email) are never subject to this gate. Checked
+    # here rather than inside verify_login() so this can return a message
+    # distinct from "wrong password" -- see auth.py's verify_login docstring.
+    if user.email and not user.email_verified:
+        log_action(username, "login_blocked_unverified")
+        return jsonify({"error": "Please verify your email before logging in. Check your inbox for the verification link."}), 403
     session["username"] = user.username
     session["role"] = user.role
     log_action(user.username, "login_success")
     return jsonify(user.to_public())
+
+
+@app.post("/api/auth/register")
+@limiter.limit("5 per hour")
+def register():
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
+
+    # Role is never read from the request body -- self-serve registration
+    # can only ever create a "user" account (see auth.py/create_user's
+    # default), preserving the Phase 1 decision that role is server-side
+    # only, never client-chosen.
+    if len(username) < 3 or len(username) > 80:
+        return jsonify({"error": "Username must be 3-80 characters"}), 400
+    if not EMAIL_RE.match(email):
+        return jsonify({"error": "A valid email address is required"}), 400
+    if len(password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters"}), 400
+    if User.query.filter_by(username=username).first():
+        return jsonify({"error": "That username is already taken"}), 409
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "That email is already registered"}), 409
+
+    user = create_user(username, password, role="user", email=email)
+    token = generate_token()
+    user.verification_token = token
+    user.verification_token_expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+    db.session.commit()
+
+    verify_link = f"{public_base_url()}/verify-email/{token}"
+    send_email(
+        email, "Verify your Sentinel AI account",
+        f"<p>Welcome to Sentinel AI. Click below to verify your account "
+        f"(link expires in 24 hours):</p><p><a href=\"{html.escape(verify_link)}\">{html.escape(verify_link)}</a></p>",
+    )
+    log_action(username, "register", details=email)
+    return jsonify({"ok": True, "message": "Account created. Check your email to verify your account before logging in."}), 201
+
+
+@app.get("/verify-email/<token>")
+def verify_email(token):
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    user = User.query.filter_by(verification_token=token).first()
+    if not user or not user.verification_token_expires or user.verification_token_expires < now:
+        return redirect("/login.html?verify_error=1")
+    user.email_verified = True
+    user.verification_token = None
+    user.verification_token_expires = None
+    db.session.commit()
+    log_action(user.username, "email_verified")
+    return redirect("/login.html?verified=1")
+
+
+@app.post("/api/auth/forgot-password")
+@limiter.limit("5 per hour")
+def forgot_password():
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    # Always the same response regardless of whether the email exists --
+    # a different response would let an attacker enumerate registered
+    # emails one guess at a time.
+    generic_response = jsonify({"ok": True, "message": "If that email is registered, a reset link has been sent."})
+
+    user = User.query.filter_by(email=email).first() if email else None
+    if user:
+        token = generate_token()
+        user.reset_token = token
+        user.reset_token_expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
+        db.session.commit()
+        reset_link = f"{public_base_url()}/reset-password.html?token={token}"
+        send_email(
+            email, "Reset your Sentinel AI password",
+            f"<p>Click below to reset your password (link expires in 1 hour):</p>"
+            f"<p><a href=\"{html.escape(reset_link)}\">{html.escape(reset_link)}</a></p>"
+            f"<p>If you didn't request this, you can ignore this email.</p>",
+        )
+        log_action(user.username, "password_reset_requested")
+    return generic_response
+
+
+@app.post("/api/auth/reset-password")
+@limiter.limit("10 per hour")
+def reset_password():
+    data = request.get_json(silent=True) or {}
+    token = data.get("token") or ""
+    new_password = data.get("password") or ""
+
+    if len(new_password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters"}), 400
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    user = User.query.filter_by(reset_token=token).first() if token else None
+    if not user or not user.reset_token_expires or user.reset_token_expires < now:
+        return jsonify({"error": "This reset link is invalid or has expired"}), 400
+
+    user.password_hash = generate_password_hash(new_password)
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.session.commit()
+    log_action(user.username, "password_reset")
+    return jsonify({"ok": True})
+
+
+@app.post("/api/contact")
+@limiter.limit("5 per hour")
+def contact():
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip()
+    subject = (data.get("subject") or "").strip() or "New contact form submission"
+    message = (data.get("message") or "").strip()
+
+    if not name or not EMAIL_RE.match(email) or not message:
+        return jsonify({"error": "Name, a valid email, and a message are required"}), 400
+    if len(message) > 5000:
+        return jsonify({"error": "Message too long (max 5000 characters)"}), 400
+
+    recipient = os.environ.get("CONTACT_RECIPIENT_EMAIL")
+    sent = False
+    if recipient:
+        sent = send_email(
+            recipient, f"[Sentinel Contact] {subject}",
+            f"<p><b>From:</b> {html.escape(name)} ({html.escape(email)})</p><p>{html.escape(message)}</p>",
+        )
+    # Written to the audit log regardless of email outcome, so a
+    # submission is never silently lost even if MAIL_* isn't configured or
+    # a send fails -- see the note in the plan about the contact form not
+    # depending solely on email delivery.
+    note = "" if sent else " (not emailed -- CONTACT_RECIPIENT_EMAIL unset or send failed)"
+    log_action("anonymous", "contact_form_submitted", details=f"{name} <{email}>: {subject}{note}")
+    return jsonify({"ok": True, "message": "Thanks for reaching out -- we'll get back to you soon."})
 
 
 @app.post("/api/auth/logout")
@@ -219,7 +386,30 @@ def logout():
 def me():
     if not session.get("username"):
         return jsonify({"error": "not authenticated"}), 401
-    return jsonify({"username": session["username"], "role": session["role"]})
+    user = User.query.filter_by(username=session["username"]).first()
+    if not user:
+        return jsonify({"error": "not authenticated"}), 401
+    return jsonify(user.to_public())
+
+
+@app.post("/api/auth/change-password")
+@login_required
+@limiter.limit("10 per hour")
+def change_password():
+    data = request.get_json(silent=True) or {}
+    current_password = data.get("current_password") or ""
+    new_password = data.get("new_password") or ""
+
+    user = User.query.filter_by(username=session["username"]).first()
+    if not user or not verify_login(user.username, current_password):
+        return jsonify({"error": "Current password is incorrect"}), 400
+    if len(new_password) < 8:
+        return jsonify({"error": "New password must be at least 8 characters"}), 400
+
+    user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+    log_action(user.username, "password_changed")
+    return jsonify({"ok": True})
 
 
 # ---------------------------------------------------------------------------

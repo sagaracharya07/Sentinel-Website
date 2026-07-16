@@ -1,0 +1,35 @@
+{% extends "base_auth.html" %}
+{% block title %}Log in — Sentinel AI{% endblock %}
+{% block content %}
+    <div class="login-sub">AI Phishing Detection Platform — sign in to continue</div>
+
+    <form id="loginForm" autocomplete="on">
+      <div class="field">
+        <label class="field-label" for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label class="field-label" for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn btn-primary login-btn" id="loginBtn">Log in</button>
+      <div class="err-msg" id="errMsg"></div>
+      <div class="success-msg" id="successMsg"></div>
+    </form>
+
+    <div class="auth-links">
+      <a href="/forgot-password.html">Forgot password?</a>
+      <a href="/signup.html">Create an account</a>
+    </div>
+
+    <div class="demo-hint">
+      This is an academic capstone build — two seeded demo accounts are provided
+      for marking/demo purposes. Your role (User or Admin) is determined by the
+      account itself and enforced on every API request, not chosen at login.
+      <div class="role-row" style="margin-top:8px"><span>Admin console access:</span><b>admin / admin123</b></div>
+      <div class="role-row"><span>Standard scanner access:</span><b>user / user123</b></div>
+    </div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/login.js') }}"></script>
+{% endblock %}

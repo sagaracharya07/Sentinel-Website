@@ -1,0 +1,62 @@
+{% extends "base_app.html" %}
+{% block title %}Account — Sentinel AI{% endblock %}
+{% block extra_style %}
+<style>
+  label.field-label{display:block;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--paper-muted);margin-bottom:6px;font-weight:600}
+  .field{margin-bottom:18px}
+  input[type=password]{
+    width:100%;border:1px solid var(--paper-line);border-radius:var(--radius-s);
+    padding:12px 14px;font-family:var(--body);font-size:.92rem;background:var(--paper-1);color:var(--paper-text);
+    max-width:360px;
+  }
+  input:focus{outline:none;border-color:var(--scan);background:var(--paper-2)}
+  .err-msg{color:var(--threat);font-size:.82rem;font-family:var(--mono);margin-top:10px;display:none;
+    background:var(--threat-bg);border:1px solid var(--threat-line);border-radius:var(--radius-s);padding:10px 12px;max-width:360px}
+  .err-msg.show{display:block}
+  .success-msg{color:var(--safe);font-size:.82rem;font-family:var(--mono);margin-top:10px;display:none;
+    background:var(--safe-bg);border:1px solid var(--safe-line);border-radius:var(--radius-s);padding:10px 12px;max-width:360px}
+  .success-msg.show{display:block}
+  .account-meta-row{display:flex;gap:18px;font-size:.9rem;padding:10px 0;border-bottom:1px solid var(--paper-line)}
+  .account-meta-row:last-child{border-bottom:none}
+  .account-meta-row b{color:var(--paper-muted);font-weight:600;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;min-width:110px;display:inline-block}
+</style>
+{% endblock %}
+{% block content %}
+<div class="app-shell">
+  <div class="circuit-bg app-mask"></div>
+  <div class="wrap" style="position:relative;z-index:2;max-width:720px">
+    <div class="app-head">
+      <h1>Account</h1>
+      <p>Your account details and password.</p>
+    </div>
+
+    <div class="panel panel-pad hud-frame" style="margin-bottom:28px">
+      <div class="panel-head"><h3>Account details</h3></div>
+      <div class="account-meta-row"><b>Username</b><span id="acctUsername">—</span></div>
+      <div class="account-meta-row"><b>Role</b><span id="acctRole">—</span></div>
+      <div class="account-meta-row"><b>Email</b><span id="acctEmail">—</span></div>
+      <div class="account-meta-row"><b>Verified</b><span id="acctVerified">—</span></div>
+    </div>
+
+    <div class="panel panel-pad hud-frame">
+      <div class="panel-head"><h3>Change password</h3></div>
+      <form id="changePasswordForm">
+        <div class="field">
+          <label class="field-label" for="currentPassword">Current password</label>
+          <input type="password" id="currentPassword" autocomplete="current-password" required>
+        </div>
+        <div class="field">
+          <label class="field-label" for="newPassword">New password</label>
+          <input type="password" id="newPassword" autocomplete="new-password" required minlength="8">
+        </div>
+        <button type="submit" class="btn btn-primary" id="changePasswordBtn">Update password</button>
+        <div class="err-msg" id="errMsg"></div>
+        <div class="success-msg" id="successMsg"></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/account.js') }}"></script>
+{% endblock %}

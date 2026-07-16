@@ -177,11 +177,14 @@ p{margin:0}
 }
 .nav-cta:hover{filter:brightness(1.1);transform:translateY(-1px)}
 
+.nav-auth-links{display:flex;align-items:center;gap:8px;flex:none}
+
 @media (max-width:680px){
   .topnav .wrap{flex-wrap:wrap;height:auto;padding:10px 20px;row-gap:8px}
   .navlinks{order:3;width:100%;justify-content:flex-start;gap:2px;overflow-x:auto}
   .navlinks a{padding:6px 10px;font-size:.74rem;white-space:nowrap}
   .nav-cta{padding:8px 12px;font-size:.72rem}
+  .nav-auth-links{order:2}
 }
 
 /* ---------- buttons ---------- */
@@ -254,6 +257,86 @@ footer .foot-bottom{border-top:1px solid var(--ink-line);margin-top:40px;padding
   .grid-4{grid-template-columns:1fr}
   .section{padding:64px 0}
 }
+
+/* ---------- shared marketing components (used by index.html and the
+   content pages under backend/templates/ -- kept here, not duplicated
+   per-page, once the site grew past the original 4 pages) ---------- */
+.pipeline{display:flex;align-items:stretch;gap:0;margin-top:48px;flex-wrap:wrap}
+.pipe-step{
+  flex:1;min-width:150px;background:var(--paper-2);border:1px solid var(--paper-line);
+  padding:24px 20px;position:relative;
+}
+.pipe-step:first-child{border-radius:var(--radius-m) 0 0 var(--radius-m)}
+.pipe-step:last-child{border-radius:0 var(--radius-m) var(--radius-m) 0}
+@media (max-width:820px){
+  .pipe-step{border-radius:var(--radius-m) !important;flex:1 1 100%}
+}
+.pipe-step .pk{font-family:var(--mono);font-size:.7rem;color:var(--scan-2);text-transform:uppercase;letter-spacing:.06em}
+.pipe-step h4{margin-top:8px;font-size:1rem}
+.pipe-step p{margin-top:6px;font-size:.86rem;color:var(--paper-muted);line-height:1.5}
+.pipe-arrow{display:flex;align-items:center;color:var(--paper-muted);padding:0 6px;font-size:1.2rem}
+@media (max-width:820px){ .pipe-arrow{display:none} }
+
+.feat-card{background:var(--paper-2);border:1px solid var(--paper-line);border-radius:var(--radius-m);padding:26px;box-shadow:var(--shadow-1)}
+.feat-card .fico{width:38px;height:38px;border-radius:10px;background:var(--ink-0);color:var(--scan);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;margin-bottom:16px}
+.feat-card h4{font-size:1.02rem;margin-bottom:8px}
+.feat-card p{font-size:.9rem;color:var(--paper-muted);line-height:1.55}
+
+.compare-wrap{overflow-x:auto;border:1px solid var(--paper-line);border-radius:var(--radius-m);background:var(--paper-2)}
+.compare{min-width:680px}
+.compare th:first-child, .compare td:first-child{position:sticky;left:0;background:var(--paper-2)}
+.compare td.yes{color:var(--safe);font-weight:700}
+.compare td.no{color:var(--paper-muted)}
+.compare th.us{color:var(--scan-2)}
+
+.cta-band{
+  background:linear-gradient(135deg, var(--ink-0), #0C1730 60%);
+  border-radius:var(--radius-l);padding:64px 48px;text-align:center;color:var(--ink-text);
+  margin:0 auto;
+}
+.cta-band h2{color:#fff;font-size:2rem;margin-bottom:14px}
+.cta-band p{color:var(--ink-muted);max-width:520px;margin:0 auto 28px}
+
+/* pricing */
+.price-card{background:var(--paper-2);border:1px solid var(--paper-line);border-radius:var(--radius-l);padding:32px 28px;position:relative;display:flex;flex-direction:column}
+.price-card.featured{border-color:var(--scan);box-shadow:0 0 0 1px var(--scan), var(--shadow-2)}
+.price-card .plan-badge{position:absolute;top:-13px;right:24px;background:var(--scan);color:var(--ink-0);font-family:var(--mono);font-size:.68rem;font-weight:700;padding:4px 12px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em}
+.price-card h3{font-size:1.15rem;margin-bottom:6px}
+.price-card .price{font-family:var(--display);font-size:2.4rem;font-weight:800;color:var(--paper-text);margin:14px 0 4px}
+.price-card .price span{font-family:var(--mono);font-size:.78rem;color:var(--paper-muted);font-weight:400}
+.price-card .plan-desc{font-size:.85rem;color:var(--paper-muted);min-height:40px}
+.price-list{list-style:none;margin:22px 0;flex:1;display:flex;flex-direction:column;gap:11px}
+.price-list li{font-size:.88rem;color:var(--paper-text);display:flex;align-items:flex-start;gap:9px}
+.price-list li svg{flex:none;margin-top:3px;color:var(--safe)}
+
+/* simple content pages (FAQ / legal / changelog / resources) */
+.content-page h2{font-size:1.5rem;margin:40px 0 14px}
+.content-page h2:first-child{margin-top:0}
+.content-page h3{font-size:1.1rem;margin:24px 0 8px}
+.content-page p{color:var(--paper-muted);line-height:1.7;margin-bottom:12px}
+.content-page ul{margin:0 0 16px 20px;color:var(--paper-muted);line-height:1.8}
+.content-prose{max-width:760px}
+.faq-item{border-bottom:1px solid var(--paper-line);padding:20px 0}
+.faq-item:first-child{padding-top:0}
+.faq-item summary{cursor:pointer;font-weight:600;font-size:.98rem;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary::after{content:'+';font-family:var(--mono);font-size:1.2rem;color:var(--paper-muted)}
+.faq-item[open] summary::after{content:'−'}
+.faq-item p{margin-top:12px}
+
+.changelog-entry{display:flex;gap:24px;padding:26px 0;border-bottom:1px solid var(--paper-line)}
+.changelog-entry:first-child{padding-top:0}
+.changelog-date{font-family:var(--mono);font-size:.76rem;color:var(--paper-muted);min-width:110px;flex:none;padding-top:3px}
+.changelog-tag{display:inline-block;font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;font-weight:700;padding:2px 9px;border-radius:999px;margin-bottom:8px}
+.changelog-tag.feature{background:var(--safe-bg);color:var(--safe)}
+.changelog-tag.security{background:var(--threat-bg);color:var(--threat)}
+.changelog-tag.infra{background:var(--warn-bg);color:var(--warn)}
+.changelog-tag.model{background:rgba(139,124,255,.14);color:var(--scan-2)}
+
+.status-row{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--paper-line)}
+.status-row:last-child{border-bottom:none}
+.status-ok{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.78rem;color:var(--safe);font-weight:600}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--safe);box-shadow:0 0 8px var(--safe)}
 
 /* ---------- app shell (scan / admin) ---------- */
 .app-shell{min-height:calc(100vh - 68px);background:var(--paper-0);position:relative}

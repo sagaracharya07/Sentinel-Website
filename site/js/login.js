@@ -6,16 +6,27 @@
 (() => {
   const form = document.getElementById('loginForm');
   const errMsg = document.getElementById('errMsg');
+  const successMsg = document.getElementById('successMsg');
   const loginBtn = document.getElementById('loginBtn');
 
-  function paramsNext() {
-    const p = new URLSearchParams(window.location.search);
-    return p.get('next');
+  function params() {
+    return new URLSearchParams(window.location.search);
+  }
+
+  // GET /verify-email/<token> (app.py) redirects back here with one of
+  // these two query params -- surface the outcome instead of silently
+  // dropping it.
+  if (params().get('verified') === '1') {
+    successMsg.textContent = 'Email verified — you can now log in.';
+    successMsg.classList.add('show');
+  } else if (params().get('verify_error') === '1') {
+    errMsg.textContent = 'That verification link is invalid or has expired.';
+    errMsg.classList.add('show');
   }
 
   // If already logged in, skip straight to the right dashboard.
   SentinelAPI.me().then(user => {
-    window.location.href = user.role === 'admin' ? 'admin.html' : 'scan.html';
+    window.location.href = user.role === 'admin' ? '/admin.html' : '/scan.html';
   }).catch(() => { /* not logged in — show the form */ });
 
   form.addEventListener('submit', async (e) => {
@@ -28,11 +39,11 @@
         document.getElementById('username').value.trim(),
         document.getElementById('password').value
       );
-      const next = paramsNext();
-      if (next && next !== 'login.html') {
+      const next = params().get('next');
+      if (next && next !== 'login.html' && next !== '/login.html') {
         window.location.href = next;
       } else {
-        window.location.href = user.role === 'admin' ? 'admin.html' : 'scan.html';
+        window.location.href = user.role === 'admin' ? '/admin.html' : '/scan.html';
       }
     } catch (err) {
       errMsg.textContent = err.message || 'Login failed';

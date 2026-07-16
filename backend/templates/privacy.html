@@ -1,0 +1,30 @@
+{% extends "base_marketing.html" %}
+{% block title %}Privacy Policy — Sentinel AI{% endblock %}
+{% block description %}How Sentinel AI collects, stores, and disposes of data.{% endblock %}
+{% block content %}
+<section class="section content-page">
+  <div class="wrap content-prose">
+    <span class="eyebrow">Legal</span>
+    <h1 style="font-size:2.2rem;margin:10px 0 8px">Privacy Policy</h1>
+    <p style="font-size:.82rem;color:var(--paper-muted)">Last updated 2026 — describes this build's actual data handling, not generic boilerplate.</p>
+
+    <h2>What we collect</h2>
+    <p>Account information you provide directly (username, email address, password — stored as a one-way hash, never in plaintext). If you connect a mailbox for monitoring, we process the content of messages in that mailbox — sender, subject, and body — solely to classify them.</p>
+
+    <h2>How long we keep it</h2>
+    <p>Scan metadata (classification, confidence score, risk level, timestamp) is retained for auditing and to support the feedback/retraining loop. The raw body content of a scanned email is automatically redacted 24 hours after the scan by an automated process — after that point, only the classification outcome remains, not the original content.</p>
+
+    <h2>Who can see it</h2>
+    <p>Scan results are visible to the user who submitted them and to administrators reviewing the quarantine/flag queue. Mailbox credentials are stored only as configuration for the connection itself and are never displayed back through the interface.</p>
+
+    <h2>Third parties</h2>
+    <p>We do not sell or share personal data with third parties for marketing purposes. Outbound email (account verification, password reset) is sent through a configured SMTP provider solely to deliver that specific message.</p>
+
+    <h2>Your choices</h2>
+    <p>You can request account deletion at any time by contacting us. If you connected a mailbox, disconnecting it (removing the configuration) stops all further access immediately — nothing about the integration persists once credentials are removed.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about this policy can be sent through the <a href="/contact.html">contact form</a>.</p>
+  </div>
+</section>
+{% endblock %}

@@ -30,6 +30,14 @@ const SentinelAPI = (() => {
     request('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
   const logout = () => request('/api/auth/logout', { method: 'POST' });
   const me = () => request('/api/auth/me');
+  const register = (username, email, password) =>
+    request('/api/auth/register', { method: 'POST', body: JSON.stringify({ username, email, password }) });
+  const forgotPassword = (email) =>
+    request('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
+  const resetPassword = (token, password) =>
+    request('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) });
+  const changePassword = (current_password, new_password) =>
+    request('/api/auth/change-password', { method: 'POST', body: JSON.stringify({ current_password, new_password }) });
 
   // ---- scanning ----
   const scan = (payload) => request('/api/scan', { method: 'POST', body: JSON.stringify(payload) });
@@ -69,10 +77,12 @@ const SentinelAPI = (() => {
 
   // ---- public (no login) ----
   const demoScan = () => request('/api/public/demo-scan');
+  const submitContact = (payload) => request('/api/contact', { method: 'POST', body: JSON.stringify(payload) });
 
   return {
-    login, logout, me, scan, all, getScan, stats,
+    login, logout, me, register, forgotPassword, resetPassword, changePassword,
+    scan, all, getScan, stats,
     submitFeedback, adminAction, modelInfo, retrain, retrainStatus, auditLog, resetDemoData, demoScan,
-    mailboxStatus, mailboxTest, mailboxSync,
+    mailboxStatus, mailboxTest, mailboxSync, submitContact,
   };
 })();

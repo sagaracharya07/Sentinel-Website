@@ -58,6 +58,26 @@ services:
         sync: false
       - key: ARTIFACT_STORE_SECRET_ACCESS_KEY
         sync: false
+      # Outbound email (signup verification, password reset, contact form
+      # -- backend/mail/email_client.py). Only sentinel-web sends email;
+      # worker/beat never call send_email(), so these don't need to be
+      # duplicated onto those two services. Leaving MAIL_HOST unset here
+      # is safe -- see email_client.py's dev-mode console fallback -- but
+      # means no real email goes out until it's configured.
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      - key: SENTINEL_PUBLIC_BASE_URL
+        sync: false # the real https://... URL of this deployment, used to build email links
+      - key: CONTACT_RECIPIENT_EMAIL
+        sync: false
 
   - type: worker
     name: sentinel-celery-worker
