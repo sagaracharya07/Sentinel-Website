@@ -25,7 +25,7 @@ services:
     dockerfilePath: backend/Dockerfile
     dockerContext: .
     plan: starter
-    healthCheckPath: /api/public/demo-scan
+    healthCheckPath: /healthz
     envVars:
       - key: SENTINEL_ENV
         value: production
@@ -78,6 +78,14 @@ services:
         sync: false # the real https://... URL of this deployment, used to build email links
       - key: CONTACT_RECIPIENT_EMAIL
         sync: false
+      # Optional error tracking (monitoring.py) -- unset means disabled,
+      # no account needed to deploy without it. Same DSN on all three
+      # services below if you do set one, so errors from web/worker/beat
+      # all land in one Sentry project.
+      - key: SENTRY_DSN
+        sync: false
+      - key: LOG_LEVEL
+        value: INFO
 
   - type: worker
     name: sentinel-celery-worker
@@ -106,6 +114,8 @@ services:
         sync: false
       - key: ARTIFACT_STORE_SECRET_ACCESS_KEY
         sync: false
+      - key: SENTRY_DSN
+        sync: false # same DSN as sentinel-web, if set
 
   - type: worker
     name: sentinel-celery-beat
@@ -124,3 +134,5 @@ services:
         fromDatabase: { name: sentinel-db, property: connectionString }
       - key: REDIS_URL
         fromService: { name: sentinel-redis, type: redis, property: connectionString }
+      - key: SENTRY_DSN
+        sync: false # same DSN as sentinel-web, if set

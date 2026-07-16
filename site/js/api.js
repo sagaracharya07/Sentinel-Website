@@ -67,6 +67,10 @@ const SentinelAPI = (() => {
   // blocking the request -- this kicks it off and returns a job id.
   const retrain = () => request('/api/admin/retrain', { method: 'POST', body: JSON.stringify({}) });
   const retrainStatus = (jobId) => request('/api/admin/retrain/' + encodeURIComponent(jobId));
+  // Makes `version` the one classify() actually serves -- also how a
+  // rollback to an older version works, same endpoint either way.
+  const promoteModelVersion = (version) =>
+    request('/api/admin/model-version/' + encodeURIComponent(version) + '/promote', { method: 'POST' });
   const auditLog = (limit = 50) => request('/api/admin/audit-log?limit=' + limit);
   const resetDemoData = () => request('/api/admin/reset-demo-data', { method: 'POST' });
 
@@ -82,7 +86,7 @@ const SentinelAPI = (() => {
   return {
     login, logout, me, register, forgotPassword, resetPassword, changePassword,
     scan, all, getScan, stats,
-    submitFeedback, adminAction, modelInfo, retrain, retrainStatus, auditLog, resetDemoData, demoScan,
+    submitFeedback, adminAction, modelInfo, retrain, retrainStatus, promoteModelVersion, auditLog, resetDemoData, demoScan,
     mailboxStatus, mailboxTest, mailboxSync, submitContact,
   };
 })();

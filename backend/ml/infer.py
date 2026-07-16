@@ -1,9 +1,13 @@
 """
 Loads whichever model version is current, and exposes a single classify()
-function used by the /api/scan route. Reloadable at runtime (reload()) so
-/api/admin/retrain can hot-swap in a newly retrained model without
-restarting the Flask process -- satisfies NFR-Maintainability ("retrain
-and redeploy without downtime").
+function used by the /api/scan route. promote(version) hot-swaps a new
+current version in at runtime -- no restart needed, satisfying
+NFR-Maintainability ("retrain and redeploy without downtime") -- but only
+promote() does that. Retraining alone (ml/train.py, triggered via
+/api/admin/retrain) produces a reviewable candidate model and never
+changes what's live on its own; an admin must explicitly promote a
+version (POST /api/admin/model-version/<version>/promote) for it to take
+effect, which is also how a rollback to an older version works.
 
 "Current" comes from the object store (artifact_store.py) when one's
 configured (ARTIFACT_STORE_BUCKET), since that's the only thing web,
@@ -56,6 +60,33 @@ def _pointer_version():
 def reload():
     version = _pointer_version()
     vectorizer, scaler, model, meta, metrics = _load_version(version)
+    _state.update(version=version, vectorizer=vectorizer, scaler=scaler,
+                  model=model, meta=meta, metrics=metrics)
+    return version
+
+
+def promote(version: str) -> str:
+    """
+    The only function that changes what classify() actually serves.
+    Training (ml/train.py) only ever produces a reviewable candidate;
+    this is the explicit, human-triggered action (POST
+    /api/admin/model-version/<version>/promote) that makes one version
+    live. Works identically whether `version` is the newest trained
+    candidate (the normal case) or an older, previously-live one (a
+    rollback) -- there's no separate rollback code path.
+
+    _load_version() raises if the version's files are missing or corrupt
+    (e.g. a typo'd version string, or artifacts that never finished
+    uploading) -- deliberately not caught here, so a bad promote request
+    fails loudly instead of silently leaving the old model in place while
+    claiming success.
+    """
+    vectorizer, scaler, model, meta, metrics = _load_version(version)
+
+    with open(os.path.join(ARTIFACTS_DIR, "current.json"), "w") as f:
+        json.dump({"version": version}, f)
+    artifact_store.set_current_version(version)
+
     _state.update(version=version, vectorizer=vectorizer, scaler=scaler,
                   model=model, meta=meta, metrics=metrics)
     return version

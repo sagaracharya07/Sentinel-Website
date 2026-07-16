@@ -51,7 +51,6 @@ def retrain_task(self, actor: str):
         from extensions import db
         from models import Feedback, Scan, ModelVersion
         from ml import train as train_module
-        from ml import infer
         from auth import log_action
 
         pending = Feedback.query.filter_by(used_in_retrain=False).all()
@@ -71,24 +70,24 @@ def retrain_task(self, actor: str):
         notes = f"Retrained with {len(rows)} confirmed feedback correction(s)"
         version, metrics, meta = train_module.train(extra_df=extra_df, notes=notes)
 
-        ModelVersion.query.update({ModelVersion.is_current: False})
+        # is_current is always False here -- training produces a
+        # reviewable candidate, not a live model. An admin promotes it
+        # explicitly (POST /api/admin/model-version/<version>/promote,
+        # which calls ml.infer.promote() and is what actually flips this
+        # flag) after reviewing these metrics, same action that also
+        # handles rolling back to an older version.
         mv = ModelVersion(
             version=version, accuracy=metrics["accuracy"], precision=metrics["precision"],
             recall=metrics["recall"], f1_score=metrics["f1_score"],
             false_positive_rate=metrics["false_positive_rate"],
             false_negative_rate=metrics["false_negative_rate"],
             n_train=metrics["n_train"], n_test=metrics["n_test"],
-            n_feedback_folded_in=len(rows), notes=notes, is_current=True,
+            n_feedback_folded_in=len(rows), notes=notes, is_current=False,
         )
         db.session.add(mv)
         for fb in pending:
             fb.used_in_retrain = True
         db.session.commit()
 
-        # Updates this worker process's in-memory model; the web process(es)
-        # pick up the new version lazily on their next classify() call via
-        # ml.infer._ensure_current() (see ml/infer.py) since current.json
-        # changed -- reload() here is not what makes the web process see it.
-        infer.reload()
         log_action(actor, "retrain_model", target=version, details=notes)
         return {"version": version, "metrics": metrics, "meta": meta}

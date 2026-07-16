@@ -59,15 +59,28 @@ def _ensure_bucket(client):
 
 
 def upload_version(version_dir: str, version: str):
-    """Uploads one version's artifact files, then updates the remote
-    pointer -- in that order, so no other process can ever see a pointer
-    referencing a version whose files aren't fully uploaded yet."""
+    """
+    Uploads one version's artifact files only -- does NOT touch the
+    'current' pointer. Training a model and promoting it to serve live
+    traffic are deliberately separate actions (see ml/infer.py's
+    promote()); fusing them here would mean every retrain silently goes
+    live the moment it finishes, with no review step and no way to roll
+    back except by re-training.
+    """
     if not enabled():
         return
     client = _client()
     _ensure_bucket(client)
     for fname in ARTIFACT_FILES:
         client.upload_file(os.path.join(version_dir, fname), _bucket(), f"{version}/{fname}")
+
+
+def set_current_version(version: str):
+    """The only function that moves the remote 'current' pointer -- called
+    exclusively from ml/infer.py's promote(), never from training."""
+    if not enabled():
+        return
+    client = _client()
     client.put_object(Bucket=_bucket(), Key="current.json", Body=json.dumps({"version": version}).encode())
 
 

@@ -18,6 +18,7 @@ import html
 import json
 import random
 import string
+import logging
 from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
@@ -36,6 +37,15 @@ from mailbox.imap_client import MailboxConfig, MailboxError, test_connection as 
 from mailbox.sync import sync_mailbox
 from db_config import resolve_database_uri
 from mail.email_client import send_email, public_base_url
+from logging_config import configure_logging
+from monitoring import init_sentry
+
+configure_logging()
+logger = logging.getLogger(__name__)
+
+# No-op unless SENTRY_DSN is set -- see monitoring.py.
+from sentry_sdk.integrations.flask import FlaskIntegration
+init_sentry(extra_integrations=[FlaskIntegration()])
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -136,6 +146,53 @@ TEMPLATE_PAGES = {
     "contact.html": {"active_page": "contact"}, "faq.html": {}, "privacy.html": {}, "terms.html": {},
     "integrations.html": {}, "changelog.html": {}, "security.html": {}, "resources.html": {}, "status.html": {},
 }
+
+
+# ---------------------------------------------------------------------------
+# Health endpoints -- for container orchestrators and external uptime
+# monitors, deliberately NOT the same as the old healthcheck target
+# (/api/public/demo-scan), which runs a full ML classification just to
+# confirm the process is alive. Unauthenticated and rate-limit-exempt
+# since a monitor polling every few seconds shouldn't get throttled.
+# ---------------------------------------------------------------------------
+@app.get("/healthz")
+@limiter.exempt
+def healthz():
+    """Liveness: the process is up and can answer HTTP. No dependency
+    checks -- that's /readyz's job. A container orchestrator restarts the
+    process if this stops responding, so it should never fail for a
+    reason a restart wouldn't fix (e.g. a slow database)."""
+    return jsonify({"ok": True}), 200
+
+
+@app.get("/readyz")
+@limiter.exempt
+def readyz():
+    """Readiness: can this instance actually serve traffic right now --
+    reaches Postgres and (if configured) Redis. Meant for load balancers
+    deciding whether to route traffic here, not for restart decisions."""
+    from sqlalchemy import text
+
+    checks = {}
+    try:
+        db.session.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception as e:
+        checks["database"] = f"error: {e}"
+
+    redis_url = os.environ.get("REDIS_URL")
+    if redis_url:
+        try:
+            import redis as redis_lib
+            redis_lib.from_url(redis_url, socket_connect_timeout=2).ping()
+            checks["redis"] = "ok"
+        except Exception as e:
+            checks["redis"] = f"error: {e}"
+    else:
+        checks["redis"] = "not configured"
+
+    healthy = all(v in ("ok", "not configured") for v in checks.values())
+    return jsonify({"ok": healthy, "checks": checks}), (200 if healthy else 503)
 
 
 @app.route("/")
@@ -628,6 +685,34 @@ def retrain_status(job_id):
     return jsonify({"job_id": job_id, "status": state.lower()})
 
 
+@app.post("/api/admin/model-version/<version>/promote")
+@admin_required
+@limiter.limit("20 per hour")
+def promote_model_version(version):
+    """
+    The only route that changes which model version serves live traffic.
+    Works the same whether `version` is a freshly trained candidate (the
+    normal case) or an older, previously-live one -- promoting an older
+    version IS the rollback mechanism, there's no separate rollback
+    endpoint.
+    """
+    mv = ModelVersion.query.get(version)
+    if not mv:
+        return jsonify({"error": f"No such model version: {version}"}), 404
+
+    try:
+        infer.promote(version)
+    except Exception as e:
+        return jsonify({"error": f"Could not promote {version}: {e}"}), 500
+
+    ModelVersion.query.update({ModelVersion.is_current: False})
+    mv.is_current = True
+    db.session.commit()
+
+    log_action(current_actor(), "promote_model_version", target=version)
+    return jsonify({"ok": True, "version": version})
+
+
 @app.get("/api/admin/audit-log")
 @admin_required
 def audit_log():
@@ -710,10 +795,10 @@ def ensure_seed_data():
         if Scan.query.count() == 0:
             seed_demo_scans()
     elif User.query.count() == 0:
-        print(
+        logger.warning(
             "SENTINEL_ENV=production: skipped seeding demo accounts/scans. "
-            "No users exist yet -- create one with:\n"
-            "    python create_admin.py <username> <password> [--role admin|user]"
+            "No users exist yet -- create one with: "
+            "python create_admin.py <username> <password> [--role admin|user]"
         )
 
 

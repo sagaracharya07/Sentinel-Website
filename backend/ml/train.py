@@ -11,14 +11,21 @@ versioned set of artifacts under ml/artifacts/<version>/:
                        NFR-Accuracy claims in the proposal)
   - meta.json         (version, trained_at, n_samples, notes)
 
-Also writes ml/artifacts/current.json pointing at the active version so
-ml/infer.py always loads the latest trained model without code changes.
+Deliberately does NOT promote the version it trains to "current" --
+training produces a reviewable candidate; ml/infer.py's promote()
+(triggered via POST /api/admin/model-version/<version>/promote) is the
+only thing that ever changes what ml/infer.py's classify() actually
+serves. This is what makes a bad retrain reviewable instead of silently
+going live, and what makes rolling back to an older version possible
+(promote is not "promote the newest one," it's "promote this specific
+version," so an older one works too).
 
 Run: python3 -m ml.train             (from the backend/ directory)
 """
 import os
 import json
 import time
+import logging
 import joblib
 import numpy as np
 import pandas as pd
@@ -34,6 +41,8 @@ from sklearn.metrics import (
 
 from ml.features import engineered_features, NUMERIC_FEATURE_NAMES
 from ml import artifact_store
+
+logger = logging.getLogger(__name__)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
@@ -177,17 +186,17 @@ def train(extra_df: pd.DataFrame = None, notes: str = "Initial training run"):
     with open(os.path.join(version_dir, "meta.json"), "w") as f:
         json.dump(meta, f, indent=2)
 
-    with open(os.path.join(ARTIFACTS_DIR, "current.json"), "w") as f:
-        json.dump({"version": version}, f)
-
-    # No-op unless ARTIFACT_STORE_BUCKET is configured (e.g. on Render,
-    # where web/worker/beat don't share a filesystem the way they do in
-    # docker-compose) -- see artifact_store.py.
+    # Deliberately does NOT touch current.json / the remote pointer --
+    # training produces a reviewable candidate, not a live model. Call
+    # ml.infer.promote(version) (or POST /api/admin/model-version/<v>/promote)
+    # to actually put it in front of traffic. See ml/infer.py's promote()
+    # docstring for why this split exists.
     artifact_store.upload_version(version_dir, version)
 
-    print(f"Trained {version}: acc={acc:.4f} precision={prec:.4f} recall={rec:.4f} "
-          f"f1={f1:.4f} FPR={false_positive_rate:.4f} FNR={false_negative_rate:.4f} "
-          f"({train_seconds}s, {len(df)} samples)")
+    logger.info(
+        "Trained %s: acc=%.4f precision=%.4f recall=%.4f f1=%.4f FPR=%.4f FNR=%.4f (%ss, %s samples)",
+        version, acc, prec, rec, f1, false_positive_rate, false_negative_rate, train_seconds, len(df),
+    )
     return version, metrics, meta
 
 

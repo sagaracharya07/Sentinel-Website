@@ -19,6 +19,16 @@ import os
 
 from celery import Celery
 
+from monitoring import init_sentry
+
+# No-op unless SENTRY_DSN is set -- see monitoring.py. Captures unhandled
+# exceptions from worker/beat tasks the same way FlaskIntegration does for
+# the web process (see app.py) -- without this, a task crashing would
+# only show up in stdout logs, easy to miss compared to the web process's
+# errors.
+from sentry_sdk.integrations.celery import CeleryIntegration
+init_sentry(extra_integrations=[CeleryIntegration()])
+
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 celery_app = Celery("sentinel", broker=REDIS_URL, backend=REDIS_URL, include=["tasks"])

@@ -78,7 +78,10 @@ services:
       minio: { condition: service_healthy }
       mailpit: { condition: service_healthy }
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/public/demo-scan"]
+      # /healthz, not /api/public/demo-scan -- that endpoint runs a full
+      # ML classification just to answer "is the process up," which is
+      # wasteful for something polled every 10s.
+      test: ["CMD", "curl", "-f", "http://localhost:5000/healthz"]
       interval: 10s
       timeout: 5s
       retries: 10

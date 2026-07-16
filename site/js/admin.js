@@ -230,9 +230,27 @@
         <span>${new Date(v.trained_at).toLocaleDateString()}</span>
         <span>acc ${pct(v.accuracy)} · prec ${pct(v.precision)} · recall ${pct(v.recall)}</span>
         <span style="color:var(--paper-muted)">+${v.n_feedback_folded_in} feedback</span>
+        ${v.is_current ? '' : `<button class="btn btn-ghost btn-sm" data-promote="${v.version}">Promote</button>`}
       </div>
     `).join('');
   }
+
+  modelVersionList.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-promote]');
+    if (!btn) return;
+    const version = btn.dataset.promote;
+    btn.setAttribute('disabled', 'disabled');
+    btn.textContent = 'Promoting…';
+    try {
+      await SentinelAPI.promoteModelVersion(version);
+      showToast(`${version} is now live`);
+      await renderModelInfo();
+    } catch (err) {
+      showToast(err.message || `Could not promote ${version}`);
+      btn.removeAttribute('disabled');
+      btn.textContent = 'Promote';
+    }
+  });
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -254,7 +272,11 @@
       const { job_id } = await SentinelAPI.retrain();
       retrainBtn.textContent = 'Retraining… (this can take ~1 minute)';
       const res = await pollRetrainJob(job_id);
-      showToast(`Retrained as ${res.version} — precision ${Math.round(res.metrics.precision * 100)}%`);
+      // Deliberately not live yet -- see the version-history "Promote"
+      // button. Training produces a candidate; an admin reviews these
+      // metrics and decides whether it's actually better before it
+      // serves real traffic.
+      showToast(`${res.version} trained — precision ${Math.round(res.metrics.precision * 100)}%. Review and promote below when ready.`);
       await renderModelInfo();
     } catch (err) {
       showToast(err.message || 'Retrain failed');
