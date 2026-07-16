@@ -1,0 +1,23 @@
+{
+  "version": "v1",
+  "trained_at": "2026-07-15T12:22:41.474973+00:00",
+  "n_samples_total": 37695,
+  "n_feedback_folded_in": 0,
+  "notes": "Initial training run",
+  "feature_dim": 3513,
+  "numeric_feature_names": [
+    "urgency_hits",
+    "credential_hits",
+    "generic_greeting_hits",
+    "url_count",
+    "shortener_count",
+    "raw_ip_count",
+    "brand_mismatch_count",
+    "exclaim_count",
+    "caps_word_count",
+    "sender_mismatch",
+    "short_with_link",
+    "word_count",
+    "empty_body"
+  ]
+}

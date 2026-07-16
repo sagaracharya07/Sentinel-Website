@@ -1,0 +1,17 @@
+{
+  "accuracy": 0.9606,
+  "precision": 0.9488,
+  "recall": 0.9675,
+  "f1_score": 0.9581,
+  "false_positive_rate": 0.0454,
+  "false_negative_rate": 0.0325,
+  "confusion_matrix": {
+    "tn": 3850,
+    "fp": 183,
+    "fn": 114,
+    "tp": 3392
+  },
+  "n_train": 30156,
+  "n_test": 7539,
+  "train_seconds": 58.8
+}

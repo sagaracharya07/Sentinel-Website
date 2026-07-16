@@ -1,0 +1,164 @@
+"""
+Trains the Random Forest phishing classifier described in the proposal
+(Section 2.2 FR-SE-07, pseudocode 6.5 ScanEmailWithAI) and saves a
+versioned set of artifacts under ml/artifacts/<version>/:
+
+  - tfidf_vectorizer.joblib
+  - scaler.joblib
+  - model.joblib
+  - metrics.json     (accuracy, precision, recall, f1, confusion matrix,
+                       dataset size -- the real numbers behind the
+                       NFR-Accuracy claims in the proposal)
+  - meta.json         (version, trained_at, n_samples, notes)
+
+Also writes ml/artifacts/current.json pointing at the active version so
+ml/infer.py always loads the latest trained model without code changes.
+
+Run: python3 -m ml.train             (from the backend/ directory)
+"""
+import os
+import json
+import time
+import joblib
+import numpy as np
+import pandas as pd
+from datetime import datetime, timezone
+from scipy import sparse
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score, confusion_matrix,
+)
+
+from ml.features import engineered_features, NUMERIC_FEATURE_NAMES
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(HERE, "..", "data")
+ARTIFACTS_DIR = os.path.join(HERE, "artifacts")
+
+
+def build_feature_matrix(df, vectorizer=None, scaler=None, fit=True):
+    text = (df["subject"].fillna("") + " \n " + df["body"].fillna("")).tolist()
+
+    if fit:
+        vectorizer = TfidfVectorizer(
+            max_features=3500, ngram_range=(1, 2), min_df=3,
+            sublinear_tf=True, stop_words="english",
+        )
+        tfidf = vectorizer.fit_transform(text)
+    else:
+        tfidf = vectorizer.transform(text)
+
+    numeric_rows = []
+    for _, row in df.iterrows():
+        nums, _, _ = engineered_features(row.get("subject", ""), row.get("body", ""), row.get("sender", ""))
+        numeric_rows.append(nums)
+    numeric = np.array(numeric_rows, dtype=float)
+
+    if fit:
+        scaler = StandardScaler()
+        numeric_scaled = scaler.fit_transform(numeric)
+    else:
+        numeric_scaled = scaler.transform(numeric)
+
+    X = sparse.hstack([tfidf, sparse.csr_matrix(numeric_scaled)]).tocsr()
+    return X, vectorizer, scaler
+
+
+def next_version():
+    os.makedirs(ARTIFACTS_DIR, exist_ok=True)
+    existing = [d for d in os.listdir(ARTIFACTS_DIR) if d.startswith("v")]
+    nums = []
+    for d in existing:
+        try:
+            nums.append(int(d[1:]))
+        except ValueError:
+            pass
+    return f"v{(max(nums) + 1) if nums else 1}"
+
+
+def train(extra_df: pd.DataFrame = None, notes: str = "Initial training run"):
+    """
+    extra_df: optional DataFrame of confirmed user/admin feedback
+    (sender, subject, body, label) to fold into training -- this is what
+    ml/retrain.py passes in to implement the feedback/retraining loop
+    (UC-07, pseudocode 6.9).
+    """
+    df = pd.read_csv(os.path.join(DATA_DIR, "combined_dataset.csv"))
+    if extra_df is not None and len(extra_df):
+        df = pd.concat([df, extra_df[["sender", "subject", "body", "label"]]], ignore_index=True)
+        df = df.drop_duplicates(subset=["subject", "body"], keep="last")
+
+    train_df, test_df = train_test_split(
+        df, test_size=0.2, random_state=42, stratify=df["label"]
+    )
+
+    t0 = time.time()
+    X_train, vectorizer, scaler = build_feature_matrix(train_df, fit=True)
+    X_test, _, _ = build_feature_matrix(test_df, vectorizer=vectorizer, scaler=scaler, fit=False)
+    y_train, y_test = train_df["label"].values, test_df["label"].values
+
+    clf = RandomForestClassifier(
+        n_estimators=150, max_depth=22, min_samples_leaf=3,
+        class_weight="balanced", n_jobs=-1, random_state=42,
+    )
+    clf.fit(X_train, y_train)
+    train_seconds = round(time.time() - t0, 2)
+
+    y_pred = clf.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred)
+    rec = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    cm = confusion_matrix(y_test, y_pred).tolist()  # [[TN, FP], [FN, TP]]
+    tn, fp, fn, tp = cm[0][0], cm[0][1], cm[1][0], cm[1][1]
+    false_positive_rate = fp / (fp + tn) if (fp + tn) else 0.0
+    false_negative_rate = fn / (fn + tp) if (fn + tp) else 0.0
+
+    version = next_version()
+    version_dir = os.path.join(ARTIFACTS_DIR, version)
+    os.makedirs(version_dir, exist_ok=True)
+
+    joblib.dump(vectorizer, os.path.join(version_dir, "tfidf_vectorizer.joblib"))
+    joblib.dump(scaler, os.path.join(version_dir, "scaler.joblib"))
+    joblib.dump(clf, os.path.join(version_dir, "model.joblib"))
+
+    metrics = {
+        "accuracy": round(acc, 4),
+        "precision": round(prec, 4),
+        "recall": round(rec, 4),
+        "f1_score": round(f1, 4),
+        "false_positive_rate": round(false_positive_rate, 4),
+        "false_negative_rate": round(false_negative_rate, 4),
+        "confusion_matrix": {"tn": tn, "fp": fp, "fn": fn, "tp": tp},
+        "n_train": len(train_df),
+        "n_test": len(test_df),
+        "train_seconds": train_seconds,
+    }
+    meta = {
+        "version": version,
+        "trained_at": datetime.now(timezone.utc).isoformat(),
+        "n_samples_total": len(df),
+        "n_feedback_folded_in": 0 if extra_df is None else len(extra_df),
+        "notes": notes,
+        "feature_dim": X_train.shape[1],
+        "numeric_feature_names": NUMERIC_FEATURE_NAMES,
+    }
+    with open(os.path.join(version_dir, "metrics.json"), "w") as f:
+        json.dump(metrics, f, indent=2)
+    with open(os.path.join(version_dir, "meta.json"), "w") as f:
+        json.dump(meta, f, indent=2)
+
+    with open(os.path.join(ARTIFACTS_DIR, "current.json"), "w") as f:
+        json.dump({"version": version}, f)
+
+    print(f"Trained {version}: acc={acc:.4f} precision={prec:.4f} recall={rec:.4f} "
+          f"f1={f1:.4f} FPR={false_positive_rate:.4f} FNR={false_negative_rate:.4f} "
+          f"({train_seconds}s, {len(df)} samples)")
+    return version, metrics, meta
+
+
+if __name__ == "__main__":
+    train()

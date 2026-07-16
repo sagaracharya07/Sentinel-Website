@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log in — Sentinel AI</title>
+<link rel="stylesheet" href="css/styles.css">
+<style>
+  body{min-height:100vh;display:flex;flex-direction:column}
+  .login-wrap{
+    flex:1;display:flex;align-items:center;justify-content:center;padding:40px 20px;position:relative;
+  }
+  .login-card{
+    width:100%;max-width:400px;background:var(--paper-2);border:1px solid var(--paper-line);
+    border-radius:var(--radius-l);box-shadow:var(--shadow-2);padding:36px 32px;position:relative;z-index:2;
+  }
+  .login-brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;
+    color:var(--paper-text);font-size:1.1rem;letter-spacing:.04em;margin-bottom:6px}
+  .login-brand .dot{width:9px;height:9px;border-radius:2px;background:var(--scan);box-shadow:0 0 14px 2px var(--scan)}
+  .login-brand .brand-ai{color:var(--scan)}
+  .login-sub{color:var(--paper-muted);font-size:.88rem;margin-bottom:28px}
+  label.field-label{display:block;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--paper-muted);margin-bottom:6px;font-weight:600}
+  .field{margin-bottom:18px}
+  input[type=text], input[type=password]{
+    width:100%;border:1px solid var(--paper-line);border-radius:var(--radius-s);
+    padding:12px 14px;font-family:var(--body);font-size:.92rem;background:var(--paper-1);color:var(--paper-text);
+  }
+  input:focus{outline:none;border-color:var(--scan);background:var(--paper-2)}
+  .login-btn{width:100%;justify-content:center;margin-top:6px}
+  .err-msg{color:var(--threat);font-size:.82rem;font-family:var(--mono);margin-top:14px;display:none;
+    background:var(--threat-bg);border:1px solid var(--threat-line);border-radius:var(--radius-s);padding:10px 12px}
+  .err-msg.show{display:block}
+  .demo-hint{
+    margin-top:24px;padding:14px 16px;background:var(--paper-1);border:1px dashed var(--paper-line);
+    border-radius:var(--radius-s);font-size:.78rem;color:var(--paper-muted);line-height:1.7;
+  }
+  .demo-hint b{color:var(--paper-text);font-family:var(--mono)}
+  .demo-hint .role-row{display:flex;justify-content:space-between;font-family:var(--mono)}
+  .back-link{display:block;text-align:center;margin-top:18px;font-size:.82rem;color:var(--paper-muted)}
+  .back-link:hover{color:var(--scan)}
+</style>
+</head>
+<body>
+
+<div class="circuit-bg app-mask" style="position:fixed;inset:0;z-index:0"></div>
+
+<div class="login-wrap">
+  <div class="login-card hud-frame">
+    <div class="login-brand"><span class="dot"></span> Sentinel<span class="brand-ai">AI</span></div>
+    <div class="login-sub">AI Phishing Detection Platform — sign in to continue</div>
+
+    <form id="loginForm" autocomplete="on">
+      <div class="field">
+        <label class="field-label" for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label class="field-label" for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn btn-primary login-btn" id="loginBtn">Log in</button>
+      <div class="err-msg" id="errMsg"></div>
+    </form>
+
+    <div class="demo-hint">
+      This is an academic capstone build — two seeded demo accounts are provided
+      for marking/demo purposes. Your role (User or Admin) is determined by the
+      account itself and enforced on every API request, not chosen at login.
+      <div class="role-row" style="margin-top:8px"><span>Admin console access:</span><b>admin / admin123</b></div>
+      <div class="role-row"><span>Standard scanner access:</span><b>user / user123</b></div>
+    </div>
+
+    <a href="index.html" class="back-link">← Back to overview</a>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  const form = document.getElementById('loginForm');
+  const errMsg = document.getElementById('errMsg');
+  const loginBtn = document.getElementById('loginBtn');
+
+  function paramsNext() {
+    const p = new URLSearchParams(window.location.search);
+    return p.get('next');
+  }
+
+  // If already logged in, skip straight to the right dashboard.
+  SentinelAPI.me().then(user => {
+    window.location.href = user.role === 'admin' ? 'admin.html' : 'scan.html';
+  }).catch(() => { /* not logged in — show the form */ });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errMsg.classList.remove('show');
+    loginBtn.setAttribute('disabled', 'disabled');
+    loginBtn.textContent = 'Signing in…';
+    try {
+      const user = await SentinelAPI.login(
+        document.getElementById('username').value.trim(),
+        document.getElementById('password').value
+      );
+      const next = paramsNext();
+      if (next && next !== 'login.html') {
+        window.location.href = next;
+      } else {
+        window.location.href = user.role === 'admin' ? 'admin.html' : 'scan.html';
+      }
+    } catch (err) {
+      errMsg.textContent = err.message || 'Login failed';
+      errMsg.classList.add('show');
+      loginBtn.removeAttribute('disabled');
+      loginBtn.textContent = 'Log in';
+    }
+  });
+</script>
+</body>
+</html>
