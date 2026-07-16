@@ -1,0 +1,10 @@
+[tool.ruff.lint]
+# E402: app.py must call load_dotenv() before importing modules that read
+# env vars at import time (db_config.py, mailbox config, etc) -- that's a
+# real ordering requirement, not an import-hygiene bug. tests/conftest.py
+# has the same legitimate need (env vars must be set before `from app
+# import app`).
+# E702: a handful of pre-existing `x; y` one-liners in ml/features.py --
+# cosmetic, not a correctness issue, and not worth a drive-by rewrite of
+# code untouched by this revamp.
+ignore = ["E402", "E702"]

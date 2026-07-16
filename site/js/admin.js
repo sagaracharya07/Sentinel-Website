@@ -234,11 +234,26 @@
     `).join('');
   }
 
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function pollRetrainJob(jobId, { intervalMs = 2000, timeoutMs = 5 * 60000 } = {}) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const status = await SentinelAPI.retrainStatus(jobId);
+      if (status.status === 'done') return status;
+      if (status.status === 'failed') throw new Error(status.error || 'Retrain job failed');
+      await sleep(intervalMs);
+    }
+    throw new Error('Retrain job timed out waiting for a result');
+  }
+
   retrainBtn.addEventListener('click', async () => {
     retrainBtn.setAttribute('disabled', 'disabled');
-    retrainBtn.textContent = 'Retraining… (this can take ~1 minute)';
+    retrainBtn.textContent = 'Queuing retrain job…';
     try {
-      const res = await SentinelAPI.retrain();
+      const { job_id } = await SentinelAPI.retrain();
+      retrainBtn.textContent = 'Retraining… (this can take ~1 minute)';
+      const res = await pollRetrainJob(job_id);
       showToast(`Retrained as ${res.version} — precision ${Math.round(res.metrics.precision * 100)}%`);
       await renderModelInfo();
     } catch (err) {

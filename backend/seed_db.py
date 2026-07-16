@@ -91,7 +91,8 @@ SAMPLE_EMAILS = [
 
 
 def seed_demo_scans():
-    import random, string
+    import random
+    import string
 
     def new_id():
         return "SCN-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))

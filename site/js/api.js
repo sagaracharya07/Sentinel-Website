@@ -55,7 +55,10 @@ const SentinelAPI = (() => {
 
   // ---- model / retraining ----
   const modelInfo = () => request('/api/admin/model-info');
+  // Retraining now runs on a background job queue (Celery) instead of
+  // blocking the request -- this kicks it off and returns a job id.
   const retrain = () => request('/api/admin/retrain', { method: 'POST', body: JSON.stringify({}) });
+  const retrainStatus = (jobId) => request('/api/admin/retrain/' + encodeURIComponent(jobId));
   const auditLog = (limit = 50) => request('/api/admin/audit-log?limit=' + limit);
   const resetDemoData = () => request('/api/admin/reset-demo-data', { method: 'POST' });
 
@@ -69,7 +72,7 @@ const SentinelAPI = (() => {
 
   return {
     login, logout, me, scan, all, getScan, stats,
-    submitFeedback, adminAction, modelInfo, retrain, auditLog, resetDemoData, demoScan,
+    submitFeedback, adminAction, modelInfo, retrain, retrainStatus, auditLog, resetDemoData, demoScan,
     mailboxStatus, mailboxTest, mailboxSync,
   };
 })();

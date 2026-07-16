@@ -16,37 +16,68 @@ import os
 import json
 import random
 import string
-import threading
-import time
 from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 load_dotenv()  # loads backend/.env if present (real mailbox credentials, secret key, etc.)
 
 from flask import Flask, request, jsonify, session, send_from_directory
-from werkzeug.security import generate_password_hash
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from extensions import db
 from models import Scan, Feedback, ModelVersion, AuditLog, User, MailboxStatus
 from auth import verify_login, login_required, admin_required, current_actor, log_action
 from ml import infer
-from ml import train as train_module
 from mailbox.imap_client import MailboxConfig, MailboxError, test_connection as mailbox_test_connection
 from mailbox.sync import sync_mailbox
+from db_config import resolve_database_uri
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "..", "site")
 INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
 os.makedirs(INSTANCE_DIR, exist_ok=True)
 
+# SENTINEL_ENV gates every dev-convenience default (insecure secret key,
+# demo account/data seeding) so a production boot can never silently fall
+# back to something meant only for local development.
+SENTINEL_ENV = os.environ.get("SENTINEL_ENV", "development").strip().lower()
+IS_PRODUCTION = SENTINEL_ENV == "production"
+
 app = Flask(__name__, static_folder=None)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(INSTANCE_DIR, "sentinel.db")
+app.config["SQLALCHEMY_DATABASE_URI"] = resolve_database_uri(INSTANCE_DIR, IS_PRODUCTION)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SECRET_KEY"] = os.environ.get("SENTINEL_SECRET_KEY", "dev-secret-change-in-production")
+
+_INSECURE_DEFAULT_SECRET = "dev-secret-change-in-production"
+_secret_key = os.environ.get("SENTINEL_SECRET_KEY")
+if IS_PRODUCTION and (not _secret_key or _secret_key == _INSECURE_DEFAULT_SECRET):
+    # Reject both an unset key AND the well-known placeholder value from
+    # .env.example -- copying that file verbatim into a real .env must not
+    # silently satisfy this check.
+    raise RuntimeError(
+        "SENTINEL_SECRET_KEY must be set to a real, unique secret when "
+        "SENTINEL_ENV=production -- refusing to start with an insecure or "
+        "default secret key."
+    )
+if not _secret_key:
+    _secret_key = _INSECURE_DEFAULT_SECRET
+app.config["SECRET_KEY"] = _secret_key
+
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = IS_PRODUCTION
 
 db.init_app(app)
+
+# Rate limiting -- shared via Redis (same instance Celery uses) so limits
+# apply across all web replicas instead of being tracked per-process, which
+# would let an attacker bypass the limit just by landing on a different
+# instance. Falls back to in-memory storage if REDIS_URL isn't set (local
+# dev without Redis running), with a warning from flask-limiter itself.
+limiter = Limiter(
+    get_remote_address, app=app, default_limits=[],
+    storage_uri=os.environ.get("REDIS_URL"),
+)
 
 RETENTION_HOURS = 24  # FR-DB-05 / NFR-Security: don't keep raw bodies indefinitely
 
@@ -55,11 +86,29 @@ RETENTION_HOURS = 24  # FR-DB-05 / NFR-Security: don't keep raw bodies indefinit
 # Security headers (TLS itself is a deployment/reverse-proxy concern -- see
 # README -- but these are real, applied on every response)
 # ---------------------------------------------------------------------------
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self'; "
+    "style-src 'self' 'unsafe-inline'; "  # site/*.html has inline <style> blocks, no inline scripts
+    "img-src 'self' data:; "
+    "connect-src 'self'; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'"
+)
+
+
 @app.after_request
 def set_security_headers(resp):
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["X-Frame-Options"] = "DENY"
     resp.headers["Referrer-Policy"] = "same-origin"
+    resp.headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
+    # HSTS only makes sense once the app is actually served over HTTPS
+    # (true in production behind Render's TLS termination); emitting it over
+    # plain-HTTP local dev would just be a lie the browser can't act on.
+    if IS_PRODUCTION:
+        resp.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
     return resp
 
 
@@ -109,30 +158,12 @@ def purge_old_bodies():
             log_action("system", "privacy_purge", details=f"Purged {len(old)} scan bodies older than {RETENTION_HOURS}h")
 
 
-def purge_loop():
-    while True:
-        try:
-            purge_old_bodies()
-        except Exception as e:
-            print("purge_loop error:", e)
-        time.sleep(600)  # every 10 minutes
-
-
-def mailbox_poll_loop():
-    """
-    Continuously watches the configured real mailbox and scans new mail
-    automatically -- this is what makes scanning 'automatic' rather than
-    something a user has to manually trigger every time. If no mailbox is
-    configured (.env not set up), each pass is a fast no-op.
-    """
-    interval = int(os.environ.get("MAILBOX_POLL_SECONDS", "45"))
-    while True:
-        try:
-            with app.app_context():
-                sync_mailbox(log_action=log_action)
-        except Exception as e:
-            print("mailbox_poll_loop error:", e)
-        time.sleep(interval)
+## purge_loop / mailbox_poll_loop (in-process threading.Thread daemons) have
+## been replaced by Celery Beat + worker jobs -- see celery_app.py and
+## tasks.py. Running them as in-process threads meant every additional web
+## replica would re-poll the same mailbox and re-run the same purge sweep;
+## Celery Beat guarantees exactly one scheduler enqueues each job regardless
+## of how many web/worker instances are running.
 
 
 # ---------------------------------------------------------------------------
@@ -161,6 +192,7 @@ def public_demo_scan():
 # Auth routes
 # ---------------------------------------------------------------------------
 @app.post("/api/auth/login")
+@limiter.limit("5 per minute")
 def login():
     data = request.get_json(silent=True) or {}
     username = (data.get("username") or "").strip()
@@ -195,6 +227,7 @@ def me():
 # ---------------------------------------------------------------------------
 @app.post("/api/scan")
 @login_required
+@limiter.limit("30 per minute")
 def scan_email():
     data = request.get_json(silent=True) or {}
     subject = (data.get("subject") or "").strip()
@@ -366,43 +399,43 @@ def model_info():
 
 @app.post("/api/admin/retrain")
 @admin_required
+@limiter.limit("3 per hour")
 def retrain():
-    import pandas as pd
+    """
+    Enqueues retraining on the Celery worker instead of running it (~1
+    minute of CPU-bound scikit-learn training) on this request thread.
+    Poll GET /api/admin/retrain/<job_id> with the returned id for status.
+    """
+    from tasks import retrain_task
+    try:
+        job = retrain_task.delay(current_actor())
+    except Exception as e:
+        return jsonify({"error": f"Could not reach the job queue (Redis/Celery): {e}"}), 503
+    return jsonify({"job_id": job.id, "status": "queued"}), 202
 
-    pending = Feedback.query.filter_by(used_in_retrain=False).all()
-    rows = []
-    for fb in pending:
-        scan = Scan.query.get(fb.scan_id)
-        if not scan or scan.body_purged or not scan.body:
-            continue
-        rows.append({
-            "sender": scan.sender or "",
-            "subject": scan.subject or "",
-            "body": scan.body or "",
-            "label": 1 if fb.corrected_label == "Phishing" else 0,
-        })
 
-    extra_df = pd.DataFrame(rows) if rows else None
-    notes = f"Retrained with {len(rows)} confirmed feedback correction(s)"
-    version, metrics, meta = train_module.train(extra_df=extra_df, notes=notes)
+@app.get("/api/admin/retrain/<job_id>")
+@admin_required
+def retrain_status(job_id):
+    from celery.result import AsyncResult
+    from celery_app import celery_app
 
-    ModelVersion.query.update({ModelVersion.is_current: False})
-    mv = ModelVersion(
-        version=version, accuracy=metrics["accuracy"], precision=metrics["precision"],
-        recall=metrics["recall"], f1_score=metrics["f1_score"],
-        false_positive_rate=metrics["false_positive_rate"],
-        false_negative_rate=metrics["false_negative_rate"],
-        n_train=metrics["n_train"], n_test=metrics["n_test"],
-        n_feedback_folded_in=len(rows), notes=notes, is_current=True,
-    )
-    db.session.add(mv)
-    for fb in pending:
-        fb.used_in_retrain = True
-    db.session.commit()
+    try:
+        result = AsyncResult(job_id, app=celery_app)
+        state = result.state
+    except Exception as e:
+        return jsonify({"error": f"Could not reach the job queue (Redis/Celery): {e}"}), 503
 
-    infer.reload()
-    log_action(current_actor(), "retrain_model", target=version, details=notes)
-    return jsonify({"version": version, "metrics": metrics, "meta": meta})
+    if state == "PENDING":
+        return jsonify({"job_id": job_id, "status": "pending"})
+    if state == "STARTED":
+        return jsonify({"job_id": job_id, "status": "running"})
+    if state == "SUCCESS":
+        payload = result.result
+        return jsonify({"job_id": job_id, "status": "done", **payload})
+    if state == "FAILURE":
+        return jsonify({"job_id": job_id, "status": "failed", "error": str(result.info)}), 500
+    return jsonify({"job_id": job_id, "status": state.lower()})
 
 
 @app.get("/api/admin/audit-log")
@@ -455,6 +488,8 @@ def mailbox_sync_now():
 @app.post("/api/admin/reset-demo-data")
 @admin_required
 def reset_demo_data():
+    if not ALLOW_DEMO_SEED:
+        return jsonify({"error": "Demo data reset is disabled in this environment"}), 403
     from seed_db import seed_demo_scans
     Feedback.query.delete()
     Scan.query.delete()
@@ -467,18 +502,38 @@ def reset_demo_data():
 # ---------------------------------------------------------------------------
 # App bootstrap
 # ---------------------------------------------------------------------------
+ALLOW_DEMO_SEED = (not IS_PRODUCTION) or os.environ.get("SENTINEL_ALLOW_DEMO_SEED", "false").lower() == "true"
+
+
 def ensure_seed_data():
+    """
+    Schema creation is no longer this function's job -- `alembic upgrade
+    head` (run before the app starts; see migrations/, docker-compose.yml,
+    and the Render deploy config) is the single schema authority now.
+    This only handles data: the current model-version row, and (dev-only)
+    demo accounts/scans.
+    """
     from seed_db import seed_users, seed_demo_scans, seed_model_version_row
-    db.create_all()
-    seed_users()
-    seed_model_version_row()
-    if Scan.query.count() == 0:
-        seed_demo_scans()
+    seed_model_version_row()  # records the trained model's own metrics -- not demo data, always safe
+    if ALLOW_DEMO_SEED:
+        seed_users()
+        if Scan.query.count() == 0:
+            seed_demo_scans()
+    elif User.query.count() == 0:
+        print(
+            "SENTINEL_ENV=production: skipped seeding demo accounts/scans. "
+            "No users exist yet -- create one with:\n"
+            "    python create_admin.py <username> <password> [--role admin|user]"
+        )
 
 
 if __name__ == "__main__":
+    # Local dev only -- production runs via wsgi.py + gunicorn (see
+    # docker-compose.yml / Render config). Periodic purge and mailbox sync
+    # now run as Celery Beat jobs (celery_app.py, tasks.py), not threads
+    # started here; run `celery -A celery_app worker` and
+    # `celery -A celery_app beat` alongside this for local dev if you need
+    # those jobs to actually fire.
     with app.app_context():
         ensure_seed_data()
-    threading.Thread(target=purge_loop, daemon=True).start()
-    threading.Thread(target=mailbox_poll_loop, daemon=True).start()
     app.run(host="0.0.0.0", port=5000, debug=False)

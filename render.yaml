@@ -1,0 +1,77 @@
+# Render Blueprint -- see https://render.com/docs/blueprint-spec
+# Deploys: web service (gunicorn), celery worker, celery beat (single
+# instance, never scaled -- see docker-compose.yml's comment on the same
+# point), managed Postgres, managed Redis (Key Value).
+#
+# All three backend services share backend/Dockerfile (repo-root build
+# context, same as docker-compose.yml) so there's exactly one image
+# definition to keep in sync, not three.
+
+databases:
+  - name: sentinel-db
+    plan: starter
+    databaseName: sentinel
+    user: sentinel
+
+services:
+  - type: redis
+    name: sentinel-redis
+    plan: starter
+    ipAllowList: [] # only reachable from other services in this Render account
+
+  - type: web
+    name: sentinel-web
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /api/public/demo-scan
+    envVars:
+      - key: SENTINEL_ENV
+        value: production
+      - key: SENTINEL_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase: { name: sentinel-db, property: connectionString }
+      - key: REDIS_URL
+        fromService: { name: sentinel-redis, type: redis, property: connectionString }
+      # Live-mailbox integration is opt-in: set MAILBOX_HOST/USERNAME/PASSWORD
+      # in the Render dashboard for this service if you want it connected to
+      # a real inbox (see backend/.env.example) -- left unset here since
+      # committing even placeholder mailbox creds to a blueprint is bad
+      # practice for something this sensitive.
+
+  - type: worker
+    name: sentinel-celery-worker
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    dockerCommand: celery -A celery_app worker --loglevel=info
+    plan: starter
+    envVars:
+      - key: SENTINEL_ENV
+        value: production
+      - key: SENTINEL_SECRET_KEY
+        sync: false # set to the same generated value as sentinel-web
+      - key: DATABASE_URL
+        fromDatabase: { name: sentinel-db, property: connectionString }
+      - key: REDIS_URL
+        fromService: { name: sentinel-redis, type: redis, property: connectionString }
+
+  - type: worker
+    name: sentinel-celery-beat
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    dockerCommand: celery -A celery_app beat --loglevel=info
+    plan: starter
+    numInstances: 1 # exactly one -- see the beat comment in docker-compose.yml
+    envVars:
+      - key: SENTINEL_ENV
+        value: production
+      - key: SENTINEL_SECRET_KEY
+        sync: false # set to the same generated value as sentinel-web
+      - key: DATABASE_URL
+        fromDatabase: { name: sentinel-db, property: connectionString }
+      - key: REDIS_URL
+        fromService: { name: sentinel-redis, type: redis, property: connectionString }

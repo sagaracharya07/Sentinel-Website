@@ -30,18 +30,34 @@ def _load_version(version):
     return vectorizer, scaler, model, meta, metrics
 
 
-def reload():
+def _pointer_version():
     with open(os.path.join(ARTIFACTS_DIR, "current.json")) as f:
-        version = json.load(f)["version"]
+        return json.load(f)["version"]
+
+
+def reload():
+    version = _pointer_version()
     vectorizer, scaler, model, meta, metrics = _load_version(version)
     _state.update(version=version, vectorizer=vectorizer, scaler=scaler,
                   model=model, meta=meta, metrics=metrics)
     return version
 
 
-def current_info():
-    if _state["version"] is None:
+def _ensure_current():
+    """
+    Retraining runs in a separate Celery worker process (see
+    backend/tasks.py), so its in-process reload() call doesn't touch this
+    process's _state -- only the worker's. Any process serving classify()
+    calls (the Flask web process(es)) needs to notice current.json changed
+    and reload for itself. current.json is a few bytes, so checking it on
+    every call is cheap next to the classification work itself.
+    """
+    if _state["version"] is None or _state["version"] != _pointer_version():
         reload()
+
+
+def current_info():
+    _ensure_current()
     return {"version": _state["version"], "meta": _state["meta"], "metrics": _state["metrics"]}
 
 
@@ -52,8 +68,7 @@ def classify(subject: str, body: str, sender: str = ""):
     score + risk band + explainable findings. Returns a dict ready to be
     persisted (Scan row) and returned to the front-end as JSON.
     """
-    if _state["version"] is None:
-        reload()
+    _ensure_current()
 
     from ml.features import engineered_features
 

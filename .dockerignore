@@ -1,0 +1,10 @@
+backend/.venv/
+backend/__pycache__/
+backend/mailbox/__pycache__/
+backend/ml/__pycache__/
+**/__pycache__/
+*.pyc
+backend/.env
+backend/instance/*.db
+backend/instance/*.sqlite3
+.git/
