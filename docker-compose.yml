@@ -25,6 +25,29 @@ services:
       timeout: 5s
       retries: 10
 
+  # S3-compatible object storage, standing in for whatever real provider
+  # (AWS S3, Cloudflare R2, Backblaze B2) gets used on Render -- see
+  # backend/ml/artifact_store.py. Deliberately NOT a shared Docker volume
+  # between web/worker/beat: Render's separate services don't get one
+  # either, and a volume-based fix here would hide that gap again instead
+  # of testing the mechanism that actually has to work in production.
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: sentinel-dev
+      MINIO_ROOT_PASSWORD: sentinel-dev-password
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - sentinel_minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   web:
     build:
       context: .
@@ -32,17 +55,10 @@ services:
     ports:
       - "5000:5000"
     env_file: [.env.docker]
-    volumes:
-      # Shared with worker/beat -- retrain_task (tasks.py) writes new model
-      # versions to ml/artifacts/ from the worker container; without a
-      # shared volume here, web/worker/beat each get their own independent
-      # copy baked into the image and a retrained model would silently
-      # never reach the process serving live traffic. Found by actually
-      # running a retrain job end-to-end, not by inspection.
-      - sentinel_ml_artifacts:/app/backend/ml/artifacts
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/public/demo-scan"]
       interval: 10s
@@ -60,11 +76,10 @@ services:
     # cwd, same as how gunicorn resolves wsgi:app for the web service.
     command: python -m celery -A celery_app worker --loglevel=info
     env_file: [.env.docker]
-    volumes:
-      - sentinel_ml_artifacts:/app/backend/ml/artifacts
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
 
   # Exactly one beat instance -- it's the single scheduler that enqueues
   # purge/mailbox-sync jobs (see celery_app.py). Never scale this service;
@@ -75,12 +90,11 @@ services:
       dockerfile: backend/Dockerfile
     command: python -m celery -A celery_app beat --loglevel=info
     env_file: [.env.docker]
-    volumes:
-      - sentinel_ml_artifacts:/app/backend/ml/artifacts
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
 
 volumes:
   sentinel_pgdata:
-  sentinel_ml_artifacts:
+  sentinel_minio_data:

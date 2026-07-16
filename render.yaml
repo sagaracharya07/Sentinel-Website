@@ -40,6 +40,24 @@ services:
       # a real inbox (see backend/.env.example) -- left unset here since
       # committing even placeholder mailbox creds to a blueprint is bad
       # practice for something this sensitive.
+      #
+      # Required for retraining to actually reach this service: web,
+      # sentinel-celery-worker, and sentinel-celery-beat are separate
+      # Render services with separate disks (unlike docker-compose, which
+      # shares one Docker host) -- ml/artifact_store.py is what lets a
+      # model trained on the worker become visible here. Create a bucket
+      # with any S3-compatible provider (AWS S3, Cloudflare R2, Backblaze
+      # B2) and set the same four values on ALL THREE services below via
+      # the Render dashboard (sync: false = not committed here, set
+      # manually):
+      - key: ARTIFACT_STORE_BUCKET
+        sync: false
+      - key: ARTIFACT_STORE_ENDPOINT_URL
+        sync: false # omit/leave blank for real AWS S3; required for R2/B2
+      - key: ARTIFACT_STORE_ACCESS_KEY_ID
+        sync: false
+      - key: ARTIFACT_STORE_SECRET_ACCESS_KEY
+        sync: false
 
   - type: worker
     name: sentinel-celery-worker
@@ -60,6 +78,14 @@ services:
         fromDatabase: { name: sentinel-db, property: connectionString }
       - key: REDIS_URL
         fromService: { name: sentinel-redis, type: redis, property: connectionString }
+      - key: ARTIFACT_STORE_BUCKET
+        sync: false # same bucket as sentinel-web
+      - key: ARTIFACT_STORE_ENDPOINT_URL
+        sync: false
+      - key: ARTIFACT_STORE_ACCESS_KEY_ID
+        sync: false
+      - key: ARTIFACT_STORE_SECRET_ACCESS_KEY
+        sync: false
 
   - type: worker
     name: sentinel-celery-beat

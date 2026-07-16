@@ -33,6 +33,7 @@ from sklearn.metrics import (
 )
 
 from ml.features import engineered_features, NUMERIC_FEATURE_NAMES
+from ml import artifact_store
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
@@ -178,6 +179,11 @@ def train(extra_df: pd.DataFrame = None, notes: str = "Initial training run"):
 
     with open(os.path.join(ARTIFACTS_DIR, "current.json"), "w") as f:
         json.dump({"version": version}, f)
+
+    # No-op unless ARTIFACT_STORE_BUCKET is configured (e.g. on Render,
+    # where web/worker/beat don't share a filesystem the way they do in
+    # docker-compose) -- see artifact_store.py.
+    artifact_store.upload_version(version_dir, version)
 
     print(f"Trained {version}: acc={acc:.4f} precision={prec:.4f} recall={rec:.4f} "
           f"f1={f1:.4f} FPR={false_positive_rate:.4f} FNR={false_negative_rate:.4f} "
