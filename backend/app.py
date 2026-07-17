@@ -27,6 +27,8 @@ load_dotenv()  # loads backend/.env if present (real mailbox credentials, secret
 from flask import Flask, request, jsonify, session, send_from_directory, redirect, render_template
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_wtf import CSRFProtect
+from flask_wtf.csrf import generate_csrf
 from werkzeug.security import generate_password_hash
 
 from extensions import db
@@ -84,6 +86,18 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = IS_PRODUCTION
 
 db.init_app(app)
+
+# CSRF protection -- the session cookie is the only thing authenticating
+# API requests (see site/js/api.js: `credentials: 'same-origin'`, no
+# bearer token), which makes every state-changing (POST/PUT/PATCH/DELETE)
+# route vulnerable to CSRF without this: a malicious page could submit a
+# cross-site request and the browser would attach the victim's session
+# cookie automatically. CSRFProtect checks all unsafe-method requests by
+# default (GET/HEAD/OPTIONS are inherently exempt), so this covers every
+# POST route uniformly rather than a hand-picked subset. The frontend
+# fetches a token from GET /api/csrf-token (below) and sends it back as
+# the X-CSRFToken header -- see site/js/api.js's request().
+csrf = CSRFProtect(app)
 
 # Rate limiting -- shared via Redis (same instance Celery uses) so limits
 # apply across all web replicas instead of being tracked per-process, which
@@ -195,6 +209,17 @@ def readyz():
     return jsonify({"ok": healthy, "checks": checks}), (200 if healthy else 503)
 
 
+@app.get("/api/csrf-token")
+@limiter.exempt
+def csrf_token():
+    """Fetched by site/js/api.js before every state-changing request and
+    sent back as the X-CSRFToken header. Unauthenticated on purpose --
+    forms reachable before login (register, forgot-password) need a token
+    too, and issuing one reveals nothing an attacker couldn't already get
+    by loading the page themselves."""
+    return jsonify({"csrf_token": generate_csrf()})
+
+
 @app.route("/")
 def root():
     return render_template("index.html", active_page="home")
@@ -219,9 +244,15 @@ def new_scan_id():
     return "SCN-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
 
-def status_for(label, risk_level):
+def status_for(label):
+    """Mailbox/queue disposition for a classification label.
+    Phishing (High risk) -> quarantine. Needs Review (Medium risk) ->
+    flag for analyst review, but never silently quarantine or drop it.
+    Legitimate -> no action."""
     if label == "Phishing":
-        return "Quarantined" if risk_level == "High" else "Flagged"
+        return "Quarantined"
+    if label == "Needs Review":
+        return "Flagged"
     return "Delivered"
 
 
@@ -487,7 +518,7 @@ def scan_email():
         return jsonify({"error": "Email body too large (max 20,000 characters)"}), 400
 
     result = infer.classify(subject, body, sender)
-    status = status_for(result["label"], result["risk_level"])
+    status = status_for(result["label"])
 
     scan = Scan(
         scan_id=new_scan_id(),
@@ -495,7 +526,8 @@ def scan_email():
         subject=subject or "(no subject)",
         body=body,
         classification=result["label"],
-        confidence_score=result["confidence"],
+        confidence_score=result["phishing_probability"],
+        prediction_confidence=result["prediction_confidence"],
         score=result["score"],
         risk_level=result["risk_level"],
         findings_json=json.dumps(result["findings"]),
@@ -514,12 +546,17 @@ def scan_email():
 @app.get("/api/history")
 @login_required
 def history():
-    mine_only = request.args.get("mine", "false").lower() == "true"
     status_filter = request.args.get("status")
     limit = min(int(request.args.get("limit", 100)), 500)
 
+    # Ownership is enforced server-side, not opt-in: a non-admin only ever
+    # sees their own scans, regardless of what the client sends (there used
+    # to be a `mine=true` query param that only filtered when explicitly
+    # requested -- that made ownership the caller's choice instead of the
+    # server's, so any logged-in user could see every other user's scans
+    # just by omitting it). Admins still see everything.
     q = Scan.query
-    if mine_only and session.get("role") != "admin":
+    if session.get("role") != "admin":
         q = q.filter(Scan.created_by == session["username"])
     if status_filter and status_filter != "All":
         q = q.filter(Scan.status == status_filter)
@@ -541,15 +578,20 @@ def get_scan(scan_id):
 @app.get("/api/stats")
 @login_required
 def stats():
-    scans = Scan.query.all()
+    is_admin = session.get("role") == "admin"
+    q = Scan.query if is_admin else Scan.query.filter(Scan.created_by == session["username"])
+    scans = q.all()
     total = len(scans)
     phishing = sum(1 for s in scans if s.classification == "Phishing")
+    needs_review = sum(1 for s in scans if s.classification == "Needs Review")
+    legitimate = total - phishing - needs_review
     quarantined = sum(1 for s in scans if s.status == "Quarantined")
     flagged = sum(1 for s in scans if s.status == "Flagged")
     avg_conf = (sum(s.confidence_score or 0 for s in scans) / total) if total else 0
     return jsonify({
-        "total": total, "phishing": phishing, "legitimate": total - phishing,
+        "total": total, "phishing": phishing, "needs_review": needs_review, "legitimate": legitimate,
         "quarantined": quarantined, "flagged": flagged, "avg_confidence": avg_conf,
+        "scope": "all_users" if is_admin else "own_scans",
     })
 
 
@@ -568,6 +610,8 @@ def submit_feedback():
     scan = Scan.query.get(scan_id)
     if not scan:
         return jsonify({"error": "scan not found"}), 404
+    if session.get("role") != "admin" and scan.created_by != session["username"]:
+        return jsonify({"error": "forbidden"}), 403
 
     fb = Feedback(scan_id=scan_id, original_label=scan.classification,
                   corrected_label=corrected_label, submitted_by=current_actor())

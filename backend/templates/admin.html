@@ -2,8 +2,8 @@
 {% block title %}Admin console — Sentinel AI{% endblock %}
 {% block extra_style %}
 <style>
-  .stat-cards{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;margin-top:24px}
-  @media (max-width:1080px){ .stat-cards{grid-template-columns:repeat(3,1fr)} }
+  .stat-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:18px;margin-top:24px}
+  @media (max-width:1200px){ .stat-cards{grid-template-columns:repeat(3,1fr)} }
   @media (max-width:620px){ .stat-cards{grid-template-columns:1fr 1fr} }
   .stat-card{background:var(--paper-2);border:1px solid var(--paper-line);border-radius:var(--radius-m);padding:20px;box-shadow:var(--shadow-1)}
   .stat-card b{display:block;font-family:var(--display);font-size:1.7rem}
@@ -90,9 +90,10 @@
     <div class="stat-cards">
       <div class="stat-card hud-frame"><b id="statTotal">0</b><span>Total scans</span></div>
       <div class="stat-card threat hud-frame alert"><b id="statPhishing">0</b><span>Phishing detected</span></div>
+      <div class="stat-card warn hud-frame"><b id="statNeedsReview">0</b><span>Needs review</span></div>
       <div class="stat-card safe hud-frame"><b id="statLegit">0</b><span>Legitimate</span></div>
       <div class="stat-card threat hud-frame alert"><b id="statQuarantined">0</b><span>Quarantined</span></div>
-      <div class="stat-card warn hud-frame"><b id="statAvgConf">0%</b><span>Avg. confidence</span></div>
+      <div class="stat-card warn hud-frame"><b id="statAvgConf">0%</b><span>Avg. phishing probability</span></div>
     </div>
 
     <div class="analytics-row">
@@ -131,7 +132,7 @@
       <div style="overflow-x:auto">
         <table>
           <thead>
-            <tr><th>Time</th><th>Sender</th><th>Subject</th><th>Verdict</th><th>Risk</th><th>Confidence</th><th>Status</th><th>Source</th><th>Feedback</th></tr>
+            <tr><th>Time</th><th>Sender</th><th>Subject</th><th>Verdict</th><th>Risk</th><th>Pred. confidence</th><th>Status</th><th>Source</th><th>Feedback</th></tr>
           </thead>
           <tbody id="logBody"></tbody>
         </table>
@@ -155,7 +156,7 @@
             New last pass: <span id="mbLastNew">—</span> ·
             Total scanned from mailbox: <span id="mbTotal">—</span>
           </div>
-          <div class="err-msg" id="mbError" style="margin-top:12px"></div>
+          <div class="err-msg" id="mbError" role="alert" aria-live="assertive" style="margin-top:12px"></div>
           <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
             <button class="btn btn-ghost btn-sm" id="mbTestBtn">Test connection</button>
             <button class="btn btn-primary btn-sm" id="mbSyncBtn">Sync now</button>
@@ -205,7 +206,7 @@
 
 <!-- detail modal -->
 <div class="modal-backdrop" id="modalBackdrop">
-  <div class="modal hud-frame alert">
+  <div class="modal hud-frame alert" role="dialog" aria-modal="true" aria-labelledby="modalSubject">
     <div class="modal-head">
       <div>
         <div style="font-family:var(--mono);font-size:.72rem;color:var(--paper-muted)" id="modalId"></div>
@@ -229,7 +230,7 @@
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 {% endblock %}
 {% block extra_scripts %}
 <script src="{{ url_for('static_files', filename='js/admin.js') }}"></script>

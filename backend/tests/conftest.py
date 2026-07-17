@@ -34,6 +34,14 @@ def app():
     from app import app as flask_app, limiter
 
     flask_app.config["TESTING"] = True
+    # These are direct API-client integration tests (client.post(..., json=...)),
+    # not a browser session that fetched a CSRF token first -- exercising the
+    # real CSRF flow end-to-end belongs to test_csrf.py, which turns
+    # WTF_CSRF_ENABLED back on for that one test. Disabling it here is the
+    # documented, deliberate tradeoff (see README "CSRF protection") rather
+    # than an oversight: it keeps every other test focused on the behavior
+    # it's actually testing instead of every POST needing a token dance.
+    flask_app.config["WTF_CSRF_ENABLED"] = False
     limiter.reset()  # tests share one process-wide in-memory limiter; start each test unthrottled
     from extensions import db
 

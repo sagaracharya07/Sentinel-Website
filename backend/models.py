@@ -51,8 +51,14 @@ class Scan(db.Model):
     body = db.Column(db.Text)                 # redacted after retention window (FR-DB-05)
     body_purged = db.Column(db.Boolean, default=False)
 
-    classification = db.Column(db.String(20))       # 'Phishing' | 'Legitimate'
-    confidence_score = db.Column(db.Float)           # FR-DB-03
+    classification = db.Column(db.String(20))       # 'Phishing' | 'Needs Review' | 'Legitimate'
+    confidence_score = db.Column(db.Float)           # FR-DB-03 -- despite the name, this is actually the
+                                                      # phishing probability (see phishing_probability below);
+                                                      # kept under its original name for backward compatibility
+                                                      # with existing rows/consumers rather than renamed in place.
+    prediction_confidence = db.Column(db.Float)      # how sure the model is of *whichever* label it picked --
+                                                      # max(phishing_probability, 1 - phishing_probability).
+                                                      # Nullable: old rows predate this column (see to_dict()).
     score = db.Column(db.Integer)                    # 0-100 raw model score
     risk_level = db.Column(db.String(10))            # Low | Medium | High
     findings_json = db.Column(db.Text)               # explainability payload
@@ -68,10 +74,32 @@ class Scan(db.Model):
 
     # --- real mailbox integration ---
     source = db.Column(db.String(20), default="manual")   # 'manual' | 'mailbox'
-    mailbox_uid = db.Column(db.String(50), index=True)     # IMAP UID, unique within a folder
+    mailbox_uid = db.Column(db.String(50))                 # IMAP UID, unique within a folder (see partial index below)
     mailbox_message_id = db.Column(db.String(255))         # RFC Message-ID, stable across folders/moves
     mailbox_action = db.Column(db.String(20))              # 'none' | 'quarantined' | 'flagged'
     mailbox_action_error = db.Column(db.Text)              # set if the real mailbox move/flag failed
+
+    __table_args__ = (
+        # Backstop against double-processing the same mailbox message --
+        # the sync lock (MailboxStatus.sync_in_progress) is the primary
+        # defense against concurrent syncs, but this is what actually
+        # guarantees no duplicate Scan row can exist for one UID even if
+        # that lock is ever bypassed (e.g. a stale-lock takeover after a
+        # crash). Partial index because 'manual' scans have no mailbox_uid
+        # and mustn't collide with each other on NULL.
+        #
+        # Known limitation for this single-mailbox prototype: the key is
+        # UID alone, not (account, folder, UIDVALIDITY, UID) -- IMAP UIDs
+        # are only guaranteed unique within one folder for one UIDVALIDITY
+        # epoch. Fine as long as there's exactly one configured mailbox
+        # account and its folder isn't recreated; documented in the README
+        # as a known limitation rather than fully solved here.
+        db.Index(
+            "uq_scans_mailbox_uid", "mailbox_uid", unique=True,
+            sqlite_where=db.text("source = 'mailbox' AND mailbox_uid IS NOT NULL"),
+            postgresql_where=db.text("source = 'mailbox' AND mailbox_uid IS NOT NULL"),
+        ),
+    )
 
     def findings(self):
         try:
@@ -86,6 +114,13 @@ class Scan(db.Model):
             return []
 
     def to_dict(self):
+        # Old rows (pre prediction_confidence column) don't have this
+        # stored -- derive it from confidence_score (== phishing_probability)
+        # the same way ml/infer.py does, rather than showing null.
+        pred_confidence = self.prediction_confidence
+        if pred_confidence is None and self.confidence_score is not None:
+            pred_confidence = max(self.confidence_score, 1 - self.confidence_score)
+
         return {
             "scan_id": self.scan_id,
             "from": self.sender,
@@ -93,7 +128,9 @@ class Scan(db.Model):
             "body": "[content purged per data-minimisation policy]" if self.body_purged else self.body,
             "body_purged": self.body_purged,
             "classification": self.classification,
-            "confidence_score": self.confidence_score,
+            "confidence_score": self.confidence_score,  # deprecated: this is actually phishing_probability
+            "phishing_probability": self.confidence_score,
+            "prediction_confidence": pred_confidence,
             "score": self.score,
             "risk_level": self.risk_level,
             "findings": self.findings(),
@@ -174,6 +211,15 @@ class MailboxStatus(db.Model):
     inbox_folder = db.Column(db.String(120))
     quarantine_folder = db.Column(db.String(120))
 
+    # DB-backed sync lock: prevents the Celery-Beat-scheduled sync and a
+    # manual admin "Sync now" click from running concurrently against the
+    # same mailbox (see mailbox/sync.py's _try_acquire_sync_lock()).
+    # sync_lock_acquired_at lets a stale lock (the process holding it died
+    # without releasing) be taken over after a timeout instead of
+    # deadlocking sync forever.
+    sync_in_progress = db.Column(db.Boolean, default=False)
+    sync_lock_acquired_at = db.Column(db.DateTime)
+
     def to_dict(self):
         return {
             "configured": self.configured,
@@ -186,6 +232,7 @@ class MailboxStatus(db.Model):
             "username": self.username,
             "inbox_folder": self.inbox_folder,
             "quarantine_folder": self.quarantine_folder,
+            "sync_in_progress": self.sync_in_progress,
         }
 
 

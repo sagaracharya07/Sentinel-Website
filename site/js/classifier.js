@@ -32,5 +32,38 @@ const Sentinel = (() => {
     return text;
   }
 
-  return { highlight, escapeHtml };
+  // Groups a finding's `type` (backend/ml/features.py's fixed set of
+  // finding-type strings) into one of the three explanation sections the
+  // scan/admin result views show. New finding types added later default
+  // to "Content indicators" rather than silently vanishing from the UI.
+  const FINDING_CATEGORIES = {
+    'Sender / brand mismatch': 'Sender analysis',
+    'Suspicious links': 'Link indicators',
+    'Low-content message with link': 'Link indicators',
+    'Urgency / pressure language': 'Content indicators',
+    'Requests sensitive information': 'Content indicators',
+    'Generic greeting': 'Content indicators',
+    'Formatting anomalies': 'Content indicators',
+  };
+
+  function findingCategory(type) {
+    return FINDING_CATEGORIES[type] || 'Content indicators';
+  }
+
+  // Single source of truth for the three-state verdict copy/color so
+  // scan.js and admin.js never drift from each other.
+  const VERDICT_COPY = {
+    'Phishing': { title: 'Phishing detected', color: 'var(--threat)', chip: 'chip-threat',
+      action: 'This message was automatically moved to the quarantine folder (live mailbox scans) or should not be trusted (manual scans). Do not click any links or reply.' },
+    'Needs Review': { title: 'Needs review — uncertain', color: 'var(--warn)', chip: 'chip-warn',
+      action: 'The model is not confident enough either way. It was flagged for analyst review, not quarantined. Treat with caution and verify the sender independently before acting on it.' },
+    'Legitimate': { title: 'Looks legitimate', color: 'var(--safe)', chip: 'chip-safe',
+      action: 'No action taken. As with any email, still verify unexpected requests for sensitive information or payments through a separate channel.' },
+  };
+
+  function verdictCopy(classification) {
+    return VERDICT_COPY[classification] || VERDICT_COPY['Needs Review'];
+  }
+
+  return { highlight, escapeHtml, findingCategory, verdictCopy };
 })();

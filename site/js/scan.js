@@ -15,7 +15,11 @@
   const verdictTitle = document.getElementById('verdictTitle');
   const verdictSub = document.getElementById('verdictSub');
   const riskChip = document.getElementById('riskChip');
-  const findingsBox = document.getElementById('findingsBox');
+  const confidenceRow = document.getElementById('confidenceRow');
+  const senderBox = document.getElementById('senderBox');
+  const contentBox = document.getElementById('contentBox');
+  const linkBox = document.getElementById('linkBox');
+  const recommendedActionBox = document.getElementById('recommendedActionBox');
   const annotated = document.getElementById('annotated');
   const fbLegit = document.getElementById('fbLegit');
   const fbPhish = document.getElementById('fbPhish');
@@ -87,12 +91,15 @@
     }
   });
 
+  function findingRowHtml(f) {
+    return `<div class="finding-item"><span class="finding-sev ${f.severity}"></span><div><div class="finding-title">${f.type} <span style="color:var(--paper-muted);font-weight:400">+${f.weight}pts</span></div><div class="finding-detail">${Sentinel.escapeHtml(f.detail)}</div></div></div>`;
+  }
+
   function renderResult(result) {
-    const isPhish = result.classification === 'Phishing';
-    const color = isPhish ? 'var(--threat)' : 'var(--safe)';
+    const copy = Sentinel.verdictCopy(result.classification);
 
     gauge.style.setProperty('--gpct', 0);
-    gauge.style.setProperty('--gcolor', color);
+    gauge.style.setProperty('--gcolor', copy.color);
     requestAnimationFrame(() => {
       let n = 0;
       const target = result.score;
@@ -105,24 +112,33 @@
       step();
     });
 
-    verdictTitle.textContent = isPhish ? 'Phishing detected' : 'Looks legitimate';
-    verdictTitle.style.color = color;
-    verdictSub.textContent = `Confidence ${(result.confidence_score * 100).toFixed(0)}% · ${result.findings.length} signal(s) found · model ${result.model_version}`;
+    verdictTitle.textContent = copy.title;
+    verdictTitle.style.color = copy.color;
+    verdictSub.textContent = `${result.findings.length} signal(s) found · model ${result.model_version}`;
 
-    riskChip.className = 'chip ' + (result.risk_level === 'High' ? 'chip-threat' : result.risk_level === 'Medium' ? 'chip-warn' : 'chip-safe');
+    const phishingPct = Math.round((result.phishing_probability ?? result.confidence_score ?? 0) * 100);
+    const confPct = Math.round((result.prediction_confidence ?? Math.max(result.confidence_score, 1 - result.confidence_score)) * 100);
+    confidenceRow.innerHTML = `<span>Phishing probability: <b>${phishingPct}%</b></span><span>Prediction confidence: <b>${confPct}%</b></span>`;
+
+    riskChip.className = 'chip ' + copy.chip;
     riskChip.textContent = result.risk_level + ' risk';
 
-    findingsBox.innerHTML = '';
-    if (result.findings.length === 0) {
-      findingsBox.innerHTML = '<div class="finding-item"><span class="finding-sev low"></span><div><div class="finding-title">No risk signals detected</div><div class="finding-detail">No known phishing indicators were found in this message.</div></div></div>';
-    } else {
-      result.findings.forEach(f => {
-        const row = document.createElement('div');
-        row.className = 'finding-item';
-        row.innerHTML = `<span class="finding-sev ${f.severity}"></span><div><div class="finding-title">${f.type} <span style="color:var(--paper-muted);font-weight:400">+${f.weight}pts</span></div><div class="finding-detail">${Sentinel.escapeHtml(f.detail)}</div></div>`;
-        findingsBox.appendChild(row);
-      });
-    }
+    // Manual scans on this page are never a live mailbox message, so the
+    // mailbox-action section always reads "not applicable" here -- the
+    // admin console is where a real mailbox_action shows up.
+    document.getElementById('sourceTag').textContent = 'Manual text scan';
+    recommendedActionBox.textContent = copy.action;
+
+    const bySection = { 'Sender analysis': [], 'Content indicators': [], 'Link indicators': [] };
+    (result.findings || []).forEach(f => bySection[Sentinel.findingCategory(f.type)].push(f));
+
+    const emptyNote = 'No explicit rule-based phishing indicators were detected. The decision was influenced mainly by the machine-learning text model.';
+    [['Sender analysis', senderBox], ['Content indicators', contentBox], ['Link indicators', linkBox]].forEach(([key, el]) => {
+      const items = bySection[key];
+      el.innerHTML = items.length
+        ? items.map(findingRowHtml).join('')
+        : `<div class="result-section-empty">${result.findings.length === 0 ? emptyNote : 'No indicators in this category.'}</div>`;
+    });
 
     annotated.innerHTML = Sentinel.highlight(result.body, result.highlights).replace(/\n/g, '<br>');
 
@@ -160,16 +176,20 @@
     try {
       const records = await SentinelAPI.all({ mine: true, limit: 8 });
       recentCount.textContent = `${records.length} scan(s)`;
-      recentBody.innerHTML = records.map(r => `
+      recentBody.innerHTML = records.map(r => {
+        const copy = Sentinel.verdictCopy(r.classification);
+        const conf = r.prediction_confidence ?? Math.max(r.confidence_score || 0, 1 - (r.confidence_score || 0));
+        return `
         <tr>
           <td style="font-family:var(--mono);font-size:.78rem;color:var(--paper-muted)">${timeAgo(r.scan_timestamp)}</td>
           <td>${Sentinel.escapeHtml(r.subject).slice(0, 52)}</td>
-          <td><span class="chip ${r.classification === 'Phishing' ? 'chip-threat' : 'chip-safe'}">${r.classification}</span></td>
-          <td style="font-family:var(--mono)">${Math.round((r.confidence_score || 0) * 100)}%</td>
+          <td><span class="chip ${copy.chip}">${r.classification}</span></td>
+          <td style="font-family:var(--mono)">${Math.round(conf * 100)}%</td>
           <td>${r.risk_level}</td>
           <td><span class="status-pill status-${r.status}">${r.status}</span></td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
     } catch (err) {
       recentBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--paper-muted);padding:24px">Could not load history.</td></tr>`;
     }

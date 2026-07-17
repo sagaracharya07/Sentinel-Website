@@ -100,6 +100,134 @@ def test_sync_records_error_without_crashing(app):
         assert "connection refused" in row.last_error
 
 
+def test_repeat_sync_does_not_duplicate_scans(app):
+    """Calling sync_mailbox() twice in a row for the same message (the
+    background poller and a manual click both landing on it) must not
+    create two Scan rows -- the known_uids skip plus the unique index
+    both defend against this."""
+    msg = {
+        "uid": "301", "message_id": "<msg301@mail>",
+        "sender": "a@b.com", "subject": "hi", "body": "just checking in", "date": None,
+    }
+    with app.app_context():
+        with patch.object(MailboxConfig, "from_env", return_value=_fake_cfg()), \
+             patch.object(sync_module, "fetch_new_messages", side_effect=[[msg], []]), \
+             patch.object(sync_module, "quarantine_message"), \
+             patch.object(sync_module, "flag_message"):
+            sync_module.sync_mailbox()
+            sync_module.sync_mailbox()
+
+        from models import Scan
+        matches = Scan.query.filter_by(mailbox_uid="301").all()
+        assert len(matches) == 1
+
+
+def test_overlapping_sync_is_skipped_not_run_concurrently(app):
+    """Simulates the Beat-scheduled sync and a manual admin sync landing
+    at the same time: the second caller must not process anything while
+    the first (simulated by manually holding the lock) is still running."""
+    with app.app_context():
+        from models import MailboxStatus
+        from extensions import db as _db
+        from datetime import datetime, timezone
+
+        row = sync_module.get_or_create_status_row()
+        row.sync_in_progress = True
+        row.sync_lock_acquired_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        _db.session.commit()
+
+        with patch.object(MailboxConfig, "from_env", return_value=_fake_cfg()), \
+             patch.object(sync_module, "fetch_new_messages") as mock_fetch:
+            result = sync_module.sync_mailbox()
+
+        assert result.get("skipped")
+        mock_fetch.assert_not_called()
+
+        # lock is released by the "first" sync as normal; a subsequent
+        # call succeeds again
+        row = _db.session.get(MailboxStatus, 1)
+        row.sync_in_progress = False
+        _db.session.commit()
+        with patch.object(MailboxConfig, "from_env", return_value=_fake_cfg()), \
+             patch.object(sync_module, "fetch_new_messages", return_value=[]) as mock_fetch2:
+            result2 = sync_module.sync_mailbox()
+        mock_fetch2.assert_called_once()
+        assert not result2.get("skipped")
+
+
+def test_stale_sync_lock_can_be_taken_over(app):
+    """A lock older than SYNC_LOCK_STALE_AFTER is treated as abandoned
+    (the process holding it crashed) rather than blocking sync forever."""
+    with app.app_context():
+        from extensions import db as _db
+        from datetime import datetime, timezone
+
+        row = sync_module.get_or_create_status_row()
+        row.sync_in_progress = True
+        row.sync_lock_acquired_at = (
+            datetime.now(timezone.utc).replace(tzinfo=None) - sync_module.SYNC_LOCK_STALE_AFTER * 2
+        )
+        _db.session.commit()
+
+        with patch.object(MailboxConfig, "from_env", return_value=_fake_cfg()), \
+             patch.object(sync_module, "fetch_new_messages", return_value=[]) as mock_fetch:
+            result = sync_module.sync_mailbox()
+
+        mock_fetch.assert_called_once()
+        assert not result.get("skipped")
+
+
+def test_raw_imap_exception_from_move_is_wrapped_and_does_not_crash_sync(app):
+    """quarantine_message/flag_message can raise raw imap_tools exceptions
+    (not MailboxError) from mb.move()/mb.flag()/mb.folder.create() -- these
+    must be wrapped as MailboxError so sync_mailbox's `except MailboxError`
+    catches them instead of the whole sync crashing uncaught."""
+    from mailbox.imap_client import quarantine_message, flag_message, MailboxError as RealMailboxError
+
+    cfg = _fake_cfg()
+
+    class _FakeMailBox:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        class folder:
+            @staticmethod
+            def set(_):
+                pass
+
+            @staticmethod
+            def list():
+                return []
+
+            @staticmethod
+            def create(_):
+                raise RuntimeError("raw imap_tools failure, not a MailboxError")
+
+        @staticmethod
+        def move(*a, **kw):
+            raise RuntimeError("raw imap_tools failure, not a MailboxError")
+
+        @staticmethod
+        def flag(*a, **kw):
+            raise RuntimeError("raw imap_tools failure, not a MailboxError")
+
+    with patch("mailbox.imap_client.connect", return_value=_FakeMailBox()):
+        try:
+            quarantine_message(cfg, "1")
+            assert False, "expected MailboxError"
+        except RealMailboxError:
+            pass
+
+        try:
+            flag_message(cfg, "1")
+            assert False, "expected MailboxError"
+        except RealMailboxError:
+            pass
+
+
 def test_scan_is_kept_even_if_mailbox_action_fails(app):
     msg = {
         "uid": "202", "message_id": "<msg202@mail>",

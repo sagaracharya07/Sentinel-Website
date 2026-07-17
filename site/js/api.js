@@ -8,11 +8,26 @@
    ========================================================================== */
 const SentinelAPI = (() => {
 
+  // Fetched fresh for every state-changing request rather than cached --
+  // simpler than tracking token expiry, and the extra GET is cheap next
+  // to the request it's protecting. See backend/app.py's CSRFProtect
+  // setup and GET /api/csrf-token.
+  async function getCsrfToken() {
+    const res = await fetch('/api/csrf-token', { credentials: 'same-origin' });
+    const data = await res.json();
+    return data.csrf_token;
+  }
+
   async function request(path, opts = {}) {
+    const method = (opts.method || 'GET').toUpperCase();
+    const headers = { 'Content-Type': 'application/json' };
+    if (method !== 'GET' && method !== 'HEAD') {
+      headers['X-CSRFToken'] = await getCsrfToken();
+    }
     const res = await fetch(path, {
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
       ...opts,
+      headers: { ...headers, ...(opts.headers || {}) },
     });
     let data = null;
     try { data = await res.json(); } catch (e) { /* no body */ }

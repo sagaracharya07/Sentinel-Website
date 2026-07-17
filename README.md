@@ -16,13 +16,17 @@ described below is real and running.
 
 | Layer | Technology | Status |
 |---|---|---|
-| Front-end | Static HTML/CSS/JS (`site/`) | Same visual design as before, now calling a real API |
-| Server | Flask (`backend/app.py`) | Real REST API, session-based auth, role checks |
+| Front-end | Static HTML/CSS/JS (`site/`) + Jinja2 templates (`backend/templates/`) | Same visual design, calling a real API |
+| Server | Flask (`backend/app.py`) | Real REST API, session-based auth, role checks, CSRF-protected |
 | ML model | scikit-learn Random Forest + TF-IDF (`backend/ml/`) | Trained on ~37,700 real labelled emails |
-| Database | SQLite via SQLAlchemy (`backend/instance/sentinel.db`) | Auto-created on first run |
-| Auth | Werkzeug password hashing + Flask sessions | Two seeded demo accounts (see below) |
+| Database | SQLite (local dev) or PostgreSQL (Docker/Render) via SQLAlchemy + Alembic migrations | Schema managed by `alembic upgrade head`, not `db.create_all()` |
+| Background jobs | Celery worker + Celery Beat, Redis as broker | Mailbox polling, retraining, and the privacy-purge sweep run here |
+| Model artifacts | Local `backend/ml/artifacts/<version>/`, optionally S3/MinIO-compatible object storage | Lets web/worker/beat share the active model when they're separate processes/hosts |
+| Auth | Werkzeug password hashing + Flask sessions + CSRF tokens | Two seeded demo accounts (see below), plus self-serve registration with email verification |
 
 ## 2. Quick start
+
+### Local (SQLite, no Docker/Postgres/Redis needed)
 
 ```bash
 cd backend
@@ -32,7 +36,26 @@ python3 app.py
 
 Then open **http://localhost:5000** in a browser. The database, demo
 accounts, and demo scan history are created automatically the first time
-`app.py` runs (see `ensure_seed_data()` in `app.py` / `seed_db.py`).
+`app.py` runs (see `ensure_seed_data()` in `app.py` / `seed_db.py`). This
+mode has no Redis, so Celery-backed background jobs (mailbox polling,
+retraining) don't run automatically — trigger them manually from the admin
+console instead, or run `celery -A celery_app worker` / `celery -A
+celery_app beat` alongside `python3 app.py` if you want them live.
+
+### Full stack (PostgreSQL + Redis + Celery + MinIO, via Docker Compose)
+
+```bash
+docker compose build
+docker compose up
+```
+
+Brings up Postgres, Redis, MinIO (S3-compatible model artifact storage),
+Mailpit (a local SMTP catcher so verification/reset emails are visible
+without real mail credentials, at http://localhost:8025), the Flask web
+process, a Celery worker, and Celery Beat. Migrations and demo seeding run
+automatically before the web process starts (see `backend/Dockerfile`).
+Open **http://localhost:5000** once `docker compose up` reports the `web`
+service healthy.
 
 **Demo accounts** (seeded automatically, shown on the login screen too):
 
@@ -45,22 +68,43 @@ accounts, and demo scan history are created automatically the first time
 
 The scanner works two ways now:
 
-1. **Manual test scan** (`scan.html`) — paste an email in, get a verdict. Useful
-   for testing specific examples and for the feedback loop, but not the primary
-   "production" path.
-2. **Live mailbox monitoring** — a background thread (`mailbox_poll_loop` in
-   `app.py`) connects to a real mailbox over IMAP, pulls new mail automatically
-   every `MAILBOX_POLL_SECONDS` (default 45s), classifies each message with the
-   same trained model, and takes a real action:
-   - **High risk → moved into a real `Sentinel-Quarantine` folder** in that
-     mailbox (created automatically if it doesn't exist).
-   - **Medium risk → flagged** (`\Flagged`) in place, left in the inbox.
-   - **Low risk → left alone.**
+1. **Manual test scan** (`scan.html`) — paste an email in, get a verdict.
+   Text-only: only the sender/subject/body you paste are analysed — original
+   headers, SPF/DKIM/DMARC authentication results, embedded link
+   destinations, and attachments are not. Useful for testing specific
+   examples and for the feedback loop, but not the primary "production" path.
+2. **Live mailbox monitoring** — a Celery Beat job (`tasks.mailbox_sync_task`,
+   `backend/celery_app.py`/`backend/tasks.py`) connects to a real mailbox
+   over IMAP-over-SSL, pulls new mail automatically every
+   `MAILBOX_POLL_SECONDS` (default 45s), classifies each message with the
+   same trained model, and takes a real action based on the three-state
+   decision below:
+   - **Phishing (High risk) → moved into a real `Sentinel-Quarantine` folder**
+     in that mailbox (created automatically if it doesn't exist).
+   - **Needs Review (Medium risk) → flagged** (`\Flagged`) in place, left in
+     the inbox for a human to look at — never silently quarantined or
+     silently dropped to Legitimate.
+   - **Legitimate (Low risk) → left alone.**
+
+   The same code path (`mailbox/sync.py`) backs both the scheduled Celery job
+   and the admin console's manual **"Sync now"** button, and a DB-backed lock
+   (`MailboxStatus.sync_in_progress`) stops the two from ever running
+   concurrently against the same mailbox. A partial unique index on
+   `Scan.mailbox_uid` is the backstop that guarantees no message is ever
+   recorded twice even if that lock is somehow bypassed.
 
    Releasing a false positive from the admin console **moves the real email
    back to the inbox** (looked up by its stable `Message-ID` header, since IMAP
    UIDs aren't stable across folders) — quarantine is a genuine, reversible
    mailbox action, not just a database flag.
+
+   **Known limitation:** the uniqueness key is IMAP UID alone (scoped to
+   `source='mailbox'`), not `(account, folder, UIDVALIDITY, UID)`. IMAP UIDs
+   are only guaranteed unique within one folder for one UIDVALIDITY epoch —
+   fine as long as there's exactly one configured mailbox account and its
+   folder isn't recreated, which holds for this single-mailbox prototype, but
+   full UIDVALIDITY tracking would be needed before trusting this across
+   multiple accounts or a recreated folder.
 
 ### Setup
 
@@ -75,7 +119,8 @@ python3 app.py
 Use a **throwaway test mailbox** while you're getting this working, not your
 primary account — and always use an **app password**, never your real login
 password (App Passwords require 2-Step Verification to be turned on; Gmail:
-https://myaccount.google.com/apppasswords).
+https://myaccount.google.com/apppasswords). Connections are always
+IMAP-over-SSL (port 993) — there is no plaintext-IMAP option to configure.
 
 The admin console's **"Live mailbox connection"** panel shows real connection
 status (host, account, last sync time, message counts, last error) and has
@@ -113,6 +158,40 @@ under-represent).
    the model's TF-IDF half isn't individually explainable, so the
    engineered half carries the explainability requirement (FR-FE-05).
 
+### Three-state decision logic
+
+`ml/infer.decide()` turns the model's raw phishing probability into an
+operational verdict using three bands, not a single 50% cutoff:
+
+| Phishing probability | Classification | Risk level | Mailbox action |
+|---|---|---|---|
+| ≥ 75% | **Phishing** | High | Quarantine |
+| 50%–74% | **Needs Review** | Medium | Flag for analyst review (not quarantined) |
+| < 50% | **Legitimate** | Low | None |
+
+A flat 50% cutoff meant a message the model was only ~63% sure about got
+labelled "Phishing" with the same weight as one at 99% — this splits that
+middle band out instead of silently rounding it either direction.
+
+### Probability vs. confidence
+
+The API exposes both, and they are not the same number:
+
+- **`phishing_probability`** — the model's raw P(phishing) for this message.
+- **`prediction_confidence`** — how sure the model is of *whichever* label it
+  picked: `max(phishing_probability, 1 - phishing_probability)`. A message
+  at 5% phishing probability is 95%-confidently legitimate, not "5%
+  confident" — reporting the raw phishing probability as "confidence" (as
+  an earlier version of this API did, under a field literally named
+  `confidence_score`) was misleading for anything below the Phishing
+  threshold.
+
+For backward compatibility, `confidence_score` is still present in scan
+records and the API response and still means the same thing it always did
+(phishing probability) — new code should read `phishing_probability`
+instead; `confidence_score` is kept so existing seeded/historical rows and
+any external consumer reading that field don't break.
+
 **Current model performance** (held-out 20% test split, `backend/ml/artifacts/v1/metrics.json`):
 
 | Metric | Result | Proposal target (NFR-Accuracy) |
@@ -132,13 +211,19 @@ These are real numbers from a real train/test split — run
 1. A user or admin corrects a scan's label (feedback buttons on `scan.html`,
    or Release/Confirm on `admin.html`) → stored in the `feedback` table.
 2. An admin clicks **"Retrain with new feedback"** on `admin.html` (or
-   `POST /api/admin/retrain`).
+   `POST /api/admin/retrain`) — this runs on a Celery worker, not the
+   request thread, since training takes about a minute.
 3. `ml/train.py` folds all not-yet-used feedback rows into the training
    set, trains a new versioned model (`v2`, `v3`, …), and writes fresh
-   metrics.
-4. The server hot-swaps the in-memory model (`ml/infer.reload()`) — no
-   restart needed, satisfying the "retrain and redeploy without downtime"
-   maintainability requirement.
+   metrics — this produces a **reviewable candidate**, it does **not**
+   change what's live. `ModelVersion.is_current` stays `False`.
+4. An admin reviews the new version's metrics next to the current one in
+   the "Version history" list and explicitly clicks **Promote** (`POST
+   /api/admin/model-version/<version>/promote`) to make it live —
+   `ml.infer.promote()` hot-swaps the in-memory model with no restart
+   needed. **Rollback is the same action**: promoting an older,
+   previously-live version *is* the rollback mechanism, there's no
+   separate rollback endpoint.
 5. Every past version and its metrics stay in the `model_versions` table
    so the retraining history is auditable, not just the latest number.
 
@@ -154,9 +239,15 @@ than 24h so you can see this happen immediately on first run (check the
 ## 7. Security — what's real vs. what's a deployment concern
 
 - **Real:** password hashing (Werkzeug/PBKDF2), server-side session
-  cookies (HttpOnly, SameSite=Lax), role-based authorization enforced on
-  *every* API route (not just hidden client-side), input length limits,
-  security response headers (`X-Content-Type-Options`, `X-Frame-Options`).
+  cookies (HttpOnly, SameSite=Lax), CSRF protection (Flask-WTF
+  `CSRFProtect`) on every state-changing route — the frontend fetches a
+  token from `GET /api/csrf-token` and sends it back as `X-CSRFToken` on
+  every POST (see `site/js/api.js`), role-based authorization enforced on
+  *every* API route (not just hidden client-side, and not just an
+  opt-in query parameter — `/api/history` and `/api/stats` scope to the
+  logged-in user's own scans unless they're an admin, unconditionally),
+  input length limits, security response headers
+  (`X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy`).
 - **Deployment concern, not implemented here:** TLS/HTTPS termination.
   Flask's built-in dev server speaks plain HTTP; in any real deployment
   this app would sit behind a reverse proxy (nginx, Caddy) or a platform
@@ -180,83 +271,146 @@ against the wireframe.
 ## 9. Project structure
 
 ```
-site/               front-end (served by Flask as static files)
-  index.html          marketing/overview page (public, calls /api/public/demo-scan)
-  login.html          Screen 1 — authentication
-  scan.html           Screen 2/3 — scan an email, view verdict, give feedback
-  admin.html          Screen 4/5 — quarantine review, analytics, model/retrain panel
-  js/api.js           fetch() wrapper for the backend API
-  js/auth-guard.js    client-side login/role redirect helper
-  js/classifier.js    presentation-only highlight/escape helpers (no detection logic)
-  js/scan.js, admin.js, landing.js, hud.js, lightning.js
+site/               static assets served by Flask (CSS/JS only — pages are now Jinja2 templates)
+  css/styles.css       shared styling (chips, forms, tables, layout)
+  js/api.js            fetch() wrapper for the backend API — attaches CSRF token to every POST
+  js/auth-guard.js      client-side login/role redirect helper
+  js/classifier.js      presentation-only helpers (highlight/escape, verdict copy, finding categories)
+  js/scan.js, admin.js, landing.js, hud.js, lightning.js, account.js, login.js, signup.js, ...
 
 backend/
-  app.py              Flask app + all API routes
-  models.py           SQLAlchemy models (Scan, Feedback, ModelVersion, User, AuditLog, MailboxStatus)
-  auth.py             password hashing, session decorators, audit logging
-  seed_db.py          demo accounts + demo scan data
-  requirements.txt
-  .env.example        mailbox credential template — copy to .env and fill in
+  app.py               Flask app + all API routes, CSRF setup, security headers, health endpoints
+  models.py            SQLAlchemy models (Scan, Feedback, ModelVersion, User, AuditLog, MailboxStatus)
+  auth.py               password hashing, session decorators, audit logging
+  celery_app.py         Celery app + Beat schedule (mailbox sync, privacy purge)
+  tasks.py               Celery tasks (mailbox sync, retrain, purge)
+  db_config.py           resolves SQLite (local dev) vs. Postgres (DATABASE_URL) — shared by app.py + Alembic
+  seed_db.py, seed_startup.py   demo accounts + demo scan data, run once before gunicorn starts
+  logging_config.py, monitoring.py   structured logging + optional Sentry integration
+  requirements.txt, requirements-dev.txt
+  .env.example          mailbox/mail/secret-key credential template — copy to .env and fill in
+  Dockerfile             single image, reused for web/worker/beat roles (see docker-compose.yml)
+  templates/              Jinja2 page templates (index, login, scan, admin, etc.)
+  migrations/versions/    Alembic migration chain (SQLite + Postgres compatible via batch_alter_table)
   mailbox/
-    imap_client.py     real IMAP connect/fetch/quarantine/unquarantine/flag
-    sync.py             bridges the mailbox to the ML pipeline + database
+    imap_client.py       real IMAP-over-SSL connect/fetch/quarantine/unquarantine/flag
+    sync.py                bridges the mailbox to the ML pipeline + DB; DB-backed sync lock lives here
   ml/
-    features.py       shared feature extraction (used by training AND inference)
-    prepare_data.py    builds the combined training dataset
-    train.py           trains + versions the Random Forest model
-    infer.py            loads the current model, classifies a single email
-    artifacts/<version>/  saved model + vectorizer + scaler + metrics per version
+    features.py          shared feature extraction (used by training AND inference)
+    prepare_data.py       builds the combined training dataset
+    train.py               trains + versions the Random Forest model
+    infer.py                loads the current model, classifies a single email (three-state decide())
+    artifact_store.py      optional S3/MinIO-compatible artifact sync (no-op if unconfigured)
+    artifacts/<version>/   saved model + vectorizer + scaler + metrics per version
+  mail/
+    email_client.py       outbound SMTP for verification/reset/contact emails (console fallback if unset)
   data/
     combined_dataset.csv   the actual training data
     DATASET_SOURCES.md     citations for the four source corpora
+  tests/                   pytest suite (auth, scan, mailbox sync, model governance, CSRF, health, ...)
   instance/
-    sentinel.db         SQLite database (created on first run)
+    sentinel.db            local SQLite database (created on first run; not used when DATABASE_URL is set)
 ```
 
 ## 10. API reference
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
+| GET | `/healthz` | — | liveness (process is up) |
+| GET | `/readyz` | — | readiness (DB + Redis reachable) |
+| GET | `/api/csrf-token` | — | fetch a CSRF token; required as `X-CSRFToken` on every POST below |
 | POST | `/api/auth/login` | — | log in, sets session cookie |
+| POST | `/api/auth/register` | — | self-serve signup (role always `user`, email verification required) |
 | POST | `/api/auth/logout` | — | clear session |
 | GET | `/api/auth/me` | session | current user info |
+| POST | `/api/auth/change-password` | user | change own password |
 | GET | `/api/public/demo-scan` | — | canned example through the real model (homepage) |
 | POST | `/api/scan` | user | classify a manually-pasted email, persist it |
-| GET | `/api/history` | user | list scans (`?mine=true`, `?status=`, `?limit=`) |
-| GET | `/api/scan/<id>` | user | single scan detail |
-| GET | `/api/stats` | user | aggregate counts for the dashboard |
-| POST | `/api/feedback` | user | correct a scan's label |
+| GET | `/api/history` | user | list own scans (all scans if admin); `?status=`, `?limit=` |
+| GET | `/api/scan/<id>` | user | single scan detail (own scans only, unless admin) |
+| GET | `/api/stats` | user | aggregate counts — own scans only, unless admin (`scope` field says which) |
+| POST | `/api/feedback` | user | correct a scan's label (own scans only, unless admin — 403 otherwise) |
 | POST | `/api/admin/action` | admin | release (real un-quarantine) / confirm / escalate |
 | GET | `/api/admin/model-info` | admin | current + historical model metrics |
-| POST | `/api/admin/retrain` | admin | fold in feedback, train + hot-swap a new model |
+| POST | `/api/admin/retrain` | admin | fold in feedback, train a new candidate model (does not go live) |
+| POST | `/api/admin/model-version/<version>/promote` | admin | make a version live — also the rollback mechanism |
 | GET | `/api/admin/audit-log` | admin | recent audit trail |
 | POST | `/api/admin/reset-demo-data` | admin | wipe and reseed demo scans |
 | GET | `/api/admin/mailbox-status` | admin | live connection/sync status |
 | POST | `/api/admin/mailbox-test` | admin | test the IMAP connection right now |
-| POST | `/api/admin/mailbox-sync` | admin | trigger an immediate sync (same code path as the poller) |
+| POST | `/api/admin/mailbox-sync` | admin | trigger an immediate sync (same code path as the Celery Beat job) |
+
+## 10a. Testing & deployment verification
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+pytest -v                  # unit + integration tests (SQLite, isolated temp DB)
+ruff check .                # lint
+ruff format --check .       # formatting (not currently enforced clean — see below)
+python -m compileall .       # syntax check
+```
+
+CI (`.github/workflows/ci.yml`) additionally runs `alembic upgrade head`
+against a real Postgres service container, so the migration chain is
+checked against both SQLite (implicitly, via the test suite's DB fixture)
+and Postgres (explicitly, in CI) — not just one dialect.
+
+**Python version:** both `backend/Dockerfile` and CI pin `python:3.14`.
+This was flagged during the Phase 1 audit as an unverified combination
+with `scikit-learn`/`pandas`/`scipy`/`psycopg2-binary`, since 3.14 postdates
+this project's original knowledge base. It has since been verified
+empirically on this codebase: `pip install -r requirements.txt` (including
+`psycopg2-binary`, which ships pre-built wheels tied to a specific CPython
+ABI and is the most likely package to lag a new Python release) completed
+without needing to compile anything from source, and the full test suite
+(82 tests) passes under Python 3.14.6. Kept at 3.14 rather than downgraded
+to 3.12 on that evidence, though the *containerized* build/run (`docker
+compose build && docker compose up`) has not been exercised end-to-end in
+this environment — Docker Desktop's engine did not come up here. `docker
+compose config` (static validation of `docker-compose.yml`) does pass.
+Before a real submission demo, run `docker compose build && docker compose
+up` once yourself and confirm the `web` service reaches healthy — don't
+take this README's word for it beyond what's stated above.
 
 ## 11. Known limitations (be upfront about these in your report/demo)
 
-- No real SMTP integration for *sending* mail (quarantine notices, etc.) —
-  not in scope; the platform reads and reorganises mail, it never sends any.
-- IMAP polling (every 45s by default), not IMAP IDLE (instant push) — a
+- **The text model can produce false positives/negatives.** Precision and
+  recall are both in the mid-to-high 90s (Section 4), not 100% — the
+  three-state "Needs Review" band exists specifically because
+  medium-confidence results should get a human look, not an automatic
+  verdict either way.
+- **Medium-confidence ("Needs Review") results require human review** —
+  they are flagged, not quarantined and not silently cleared, by design.
+- **No full SPF/DKIM/DMARC authentication analysis** — manual scans are
+  text-only (sender/subject/body you paste), and even live mailbox scans
+  don't independently re-verify sender authentication results.
+- **Attachments are not analysed** — neither manual nor live mailbox scans
+  inspect attachment content.
+- **No external threat-intelligence API integration** — detection is the
+  trained model + engineered text/link signals only, not a blocklist/feed
+  lookup against a third-party reputation service.
+- **Single monitored mailbox account**, not per-user inboxes or multiple
+  accounts — represents "the organisation's protected mailbox" sitting in
+  front of a mail server. The mailbox-message uniqueness key is also
+  UID-only (see Section 3's known limitation on IMAP UIDVALIDITY).
+- **IMAP polling (every 45s by default), not IMAP IDLE** (instant push) — a
   reasonable simplification for a capstone build, and a clearly named
   upgrade path (see the suggestions below) rather than a hidden gap.
-- Single monitored mailbox, not per-user inboxes — represents "the
-  organisation's protected mailbox" sitting in front of a mail server,
-  consistent with the proposal's own framing.
-- Single-node SQLite, not a horizontally-scaled database — appropriate
-  for an academic build; the proposal's scalability requirements describe
-  target architecture, not something built and load-tested here.
+- **Model evaluation is based on this project's own held-out test
+  partition** (Section 4) — a real train/test split, reproducible by
+  running `ml/train.py` yourself, but not an independent or
+  industry-benchmark evaluation. Reported accuracy is not a guarantee of
+  real-world performance on traffic the model has never seen.
+- No real SMTP integration for *sending* mail (quarantine notices, etc.) —
+  not in scope; the platform reads and reorganises mail, it never sends any.
 - Retraining uses whatever admin-confirmed feedback exists; with only a
   handful of corrections the metric movement between versions will be
   small — that's expected and worth explaining rather than hiding.
-- Very short, low-information messages (a handful of words, no links, no
-  urgency language) can land close to the 50% decision boundary — the
-  system handles this by routing them to "Medium risk / Flagged" for
-  human review rather than confidently auto-quarantining, which is
-  arguably the correct behaviour for genuinely ambiguous input, but it's
-  worth knowing before a live demo.
+- Pricing tiers (`pricing.html`) describe intended commercial packaging,
+  not an enforced restriction — this build has no billing system, so every
+  account currently has access to mailbox monitoring, quarantine, and the
+  admin console regardless of which tier they'd notionally be on.
 
 ## 12. Suggestions for further upgrade (roughly ordered by effort vs. payoff)
 

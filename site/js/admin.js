@@ -1,6 +1,7 @@
 (() => {
   const statTotal = document.getElementById('statTotal');
   const statPhishing = document.getElementById('statPhishing');
+  const statNeedsReview = document.getElementById('statNeedsReview');
   const statLegit = document.getElementById('statLegit');
   const statQuarantined = document.getElementById('statQuarantined');
   const statAvgConf = document.getElementById('statAvgConf');
@@ -141,6 +142,7 @@
     const s = await SentinelAPI.stats();
     statTotal.textContent = s.total;
     statPhishing.textContent = s.phishing;
+    statNeedsReview.textContent = s.needs_review ?? 0;
     statLegit.textContent = s.legitimate;
     statQuarantined.textContent = s.quarantined;
     statAvgConf.textContent = Math.round((s.avg_confidence || 0) * 100) + '%';
@@ -183,19 +185,23 @@
     if (activeFilter !== 'All') records = records.filter(r => r.status === activeFilter);
     if (activeSource !== 'All') records = records.filter(r => r.source === activeSource);
     tableCount.textContent = `${records.length} record(s)`;
-    logBody.innerHTML = records.map(r => `
+    logBody.innerHTML = records.map(r => {
+      const copy = Sentinel.verdictCopy(r.classification);
+      const conf = r.prediction_confidence ?? Math.max(r.confidence_score || 0, 1 - (r.confidence_score || 0));
+      return `
       <tr data-id="${r.scan_id}">
         <td style="font-family:var(--mono);font-size:.78rem;color:var(--paper-muted)">${fmtTime(r.scan_timestamp)}</td>
         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${Sentinel.escapeHtml(r.from || '')}</td>
         <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${Sentinel.escapeHtml(r.subject || '')}</td>
-        <td><span class="chip ${r.classification === 'Phishing' ? 'chip-threat' : 'chip-safe'}">${r.classification}</span></td>
+        <td><span class="chip ${copy.chip}">${r.classification}</span></td>
         <td>${r.risk_level}</td>
-        <td style="font-family:var(--mono)">${Math.round((r.confidence_score || 0) * 100)}%</td>
+        <td style="font-family:var(--mono)">${Math.round(conf * 100)}%</td>
         <td><span class="status-pill status-${r.status}">${r.status}</span></td>
         <td><span class="source-chip ${r.source === 'mailbox' ? 'source-mailbox' : 'source-manual'}">${r.source === 'mailbox' ? 'Live mailbox' : 'Manual'}</span></td>
         <td style="font-family:var(--mono);font-size:.78rem;color:var(--paper-muted)">${r.user_feedback ? '✓ ' + r.user_feedback : '—'}</td>
       </tr>
-    `).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--paper-muted);padding:32px">No records in this view.</td></tr>`;
+    `;
+    }).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--paper-muted);padding:32px">No records in this view.</td></tr>`;
 
     logBody.querySelectorAll('tr[data-id]').forEach(row => {
       row.addEventListener('click', () => openModal(row.getAttribute('data-id')));
@@ -323,7 +329,12 @@
     modalSubject.textContent = record.subject;
     modalFrom.textContent = record.from;
     modalTime.textContent = fmtTime(record.scan_timestamp);
-    modalVerdict.innerHTML = `<span class="chip ${record.classification === 'Phishing' ? 'chip-threat' : 'chip-safe'}">${record.classification}</span> &nbsp; ${Math.round((record.confidence_score || 0) * 100)}% confidence · ${record.risk_level} risk`;
+    {
+      const copy = Sentinel.verdictCopy(record.classification);
+      const phishPct = Math.round((record.phishing_probability ?? record.confidence_score ?? 0) * 100);
+      const confPct = Math.round((record.prediction_confidence ?? Math.max(record.confidence_score || 0, 1 - (record.confidence_score || 0))) * 100);
+      modalVerdict.innerHTML = `<span class="chip ${copy.chip}">${record.classification}</span> &nbsp; ${phishPct}% phishing probability · ${confPct}% prediction confidence · ${record.risk_level} risk · model ${record.model_version || '—'}`;
+    }
     modalStatus.innerHTML = `<span class="status-pill status-${record.status}">${record.status}</span>
       <span class="source-chip ${record.source === 'mailbox' ? 'source-mailbox' : 'source-manual'}" style="margin-left:8px">${record.source === 'mailbox' ? 'Live mailbox' : 'Manual'}</span>
       ${record.source === 'mailbox' ? `<div style="margin-top:6px;font-family:var(--mono);font-size:.76rem;color:var(--paper-muted)">
@@ -335,8 +346,8 @@
       : Sentinel.highlight(record.body || '', record.highlights).replace(/\n/g, '<br>');
 
     modalFindings.innerHTML = (record.findings || []).length
-      ? record.findings.map(f => `<div class="finding-item"><span class="finding-sev ${f.severity}"></span><div><div class="finding-title">${f.type}</div><div class="finding-detail">${Sentinel.escapeHtml(f.detail)}</div></div></div>`).join('')
-      : '<div class="finding-item"><span class="finding-sev low"></span><div class="finding-title">No risk signals recorded</div></div>';
+      ? record.findings.map(f => `<div class="finding-item"><span class="finding-sev ${f.severity}"></span><div><div class="finding-title">${f.type} <span style="color:var(--paper-muted);font-weight:400">(${Sentinel.findingCategory(f.type)})</span></div><div class="finding-detail">${Sentinel.escapeHtml(f.detail)}</div></div></div>`).join('')
+      : '<div class="finding-item"><span class="finding-sev low"></span><div class="finding-title">No explicit rule-based phishing indicators were detected. The decision was influenced mainly by the machine-learning text model.</div></div>';
 
     modalActions.innerHTML = '';
     if (record.status === 'Quarantined' || record.status === 'Flagged') {

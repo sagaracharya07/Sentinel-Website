@@ -213,6 +213,7 @@ p{margin:0}
 .btn-sm{padding:8px 16px;font-size:.8rem;border-radius:6px}
 
 /* ---------- badges / chips ---------- */
+.scan-limitation-note{font-size:.8rem;color:var(--paper-muted);background:var(--paper-1);border:1px dashed var(--paper-line);border-radius:var(--radius-s);padding:10px 14px}
 .chip{
   font-family:var(--mono);font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
   padding:5px 11px;border-radius:5px;display:inline-flex;align-items:center;gap:6px;
