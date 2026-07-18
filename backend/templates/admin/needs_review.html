@@ -1,0 +1,15 @@
+{% extends "base_admin.html" %}
+{% block title %}Needs Review — Sentinel AI Console{% endblock %}
+{% block page_title %}Needs Review{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Needs Review</h1>
+  <p>Messages the model was uncertain about. Investigate each, then confirm phishing or mark legitimate.</p>
+</div>
+<section class="panel">
+  <div id="queueBody"><div class="state"><span class="spinner" aria-hidden="true"></span></div></div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/needs_review.js') }}"></script>
+{% endblock %}

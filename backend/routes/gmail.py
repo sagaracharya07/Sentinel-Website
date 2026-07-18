@@ -39,8 +39,9 @@ gmail_bp = Blueprint("gmail", __name__)
 
 _STATE_SESSION_KEY = "gmail_oauth_state"
 # Where the OAuth callback sends the browser once it's done (a real page,
-# never a JSON blob). Query params tell the page what happened.
-_RESULT_PAGE = "/mailboxes.html"
+# never a JSON blob). Query params tell the page what happened. Points at the
+# revamped Connected Mailboxes page.
+_RESULT_PAGE = "/admin/mailboxes"
 
 
 def _default_monitoring_mode() -> str:

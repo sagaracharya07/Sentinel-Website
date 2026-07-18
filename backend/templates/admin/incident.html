@@ -1,0 +1,35 @@
+{% extends "base_admin.html" %}
+{% block title %}Incident — Sentinel AI Console{% endblock %}
+{% block page_title %}Incident{% endblock %}
+{% block extra_style %}
+<style>
+  .inc-header { display: grid; grid-template-columns: auto 1fr; gap: var(--sp-5); align-items: center; }
+  .inc-gauge { width: 96px; height: 96px; border-radius: 50%; flex: none; display: grid; place-items: center; position: relative;
+    background: conic-gradient(var(--g, var(--cyan)) calc(var(--p, 0) * 1%), var(--panel-inset) 0); }
+  .inc-gauge::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: var(--panel); }
+  .inc-gauge .g-val { position: relative; font-family: var(--font-display); font-weight: 700; font-size: 1.4rem; z-index: 1; }
+  .inc-meta { display: flex; gap: var(--sp-5); flex-wrap: wrap; font-size: var(--fs-sm); }
+  .inc-meta div span { display: block; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+  .inc-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; position: sticky; top: var(--topbar-h); z-index: 5;
+    background: var(--bg); padding: var(--sp-3) 0; margin-bottom: var(--sp-4); }
+  .sec { margin-bottom: var(--sp-4); }
+  .sec h3 { font-size: 1rem; margin-bottom: var(--sp-3); display: flex; align-items: center; gap: 8px; }
+  .kv { display: grid; grid-template-columns: 130px 1fr; gap: 6px 14px; font-size: var(--fs-sm); }
+  .kv dt { color: var(--text-muted); font-family: var(--font-mono); font-size: var(--fs-xs); text-transform: uppercase; }
+  .kv dd { word-break: break-word; }
+  .preview { background: var(--panel-inset); border: 1px solid var(--border); border-radius: var(--radius-s); padding: 14px 16px;
+    font-size: var(--fs-sm); line-height: 1.6; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+  .auth-pill { display: inline-flex; gap: 6px; align-items: center; font-family: var(--font-mono); font-size: var(--fs-xs); }
+</style>
+{% endblock %}
+{% block content %}
+<a href="/admin/detections" class="breadcrumbs" style="margin-bottom:var(--sp-3)">
+  <svg class="icon" aria-hidden="true" style="width:14px;height:14px"><use href="#i-arrow-left"></use></svg> Back to detections</a>
+
+<div id="incRoot" data-scan-id="{{ scan_id }}">
+  <div class="state"><span class="spinner" aria-hidden="true"></span><div class="state-msg">Loading incident…</div></div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/incident.js') }}"></script>
+{% endblock %}

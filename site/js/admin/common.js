@@ -1,0 +1,130 @@
+/* ==========================================================================
+   AdminUI — shared helpers for the administrator console.
+   Verdict/risk/status badges, finding normalisation, and the two pieces of
+   chrome every admin page shows: sidebar queue counts + the top-bar
+   protection pill. Depends on window.SentinelUI (ui.js) + SentinelAPI (api.js).
+   ========================================================================== */
+(function () {
+  'use strict';
+  const esc = window.SentinelUI.esc;
+
+  /* verdict badge from a classification string */
+  function verdictBadge(classification) {
+    const map = {
+      'Legitimate':   ['badge-legit', 'Legitimate'],
+      'Needs Review': ['badge-review', 'Needs Review'],
+      'Phishing':     ['badge-phish', 'Phishing'],
+    };
+    const [cls, label] = map[classification] || ['badge-muted', classification || 'Unknown'];
+    return '<span class="badge ' + cls + '"><span class="dot"></span>' + esc(label) + '</span>';
+  }
+
+  function riskBadge(risk) {
+    const cls = risk === 'High' ? 'risk-high' : risk === 'Medium' ? 'risk-medium' : 'risk-low';
+    return '<span class="risk ' + cls + '">' + esc(risk || '—') + '</span>';
+  }
+
+  /* mailbox action / status label */
+  function statusBadge(status) {
+    const map = {
+      'Quarantined': 'badge-phish',
+      'Flagged': 'badge-review',
+      'Delivered': 'badge-legit',
+    };
+    const cls = map[status] || 'badge-muted';
+    return '<span class="badge ' + cls + '">' + esc(status || '—') + '</span>';
+  }
+
+  const SOURCE_LABEL = {
+    gmail: 'Gmail', upload: '.eml Upload', mailbox: 'IMAP', manual: 'Quick Analysis',
+  };
+  function sourceLabel(s) { return SOURCE_LABEL[s] || s || '—'; }
+
+  /* 0..1 float -> "87%" */
+  function pct(x) {
+    if (x === null || x === undefined || isNaN(x)) return '—';
+    return Math.round(x * 100) + '%';
+  }
+
+  /* Normalise the two finding shapes into one.
+       - security analysis (analysis.py): {category, indicator, severity, summary, evidence}
+         — its `evidence` is ALREADY HTML-escaped server-side (analysis _safe()).
+       - ML signals (features.py): {type, detail, weight, severity} — raw text. */
+  function normFinding(f) {
+    return {
+      category: f.category || 'content',
+      title: f.summary || f.type || f.indicator || 'Signal',
+      severity: (f.severity || 'low').toLowerCase(),
+    };
+  }
+  function findingHtml(f) {
+    const n = normFinding(f);
+    // title fields (summary/type/indicator) are raw -> escape here.
+    let html = '<div class="finding"><span class="sev ' + esc(n.severity) + '"></span><div>';
+    html += '<div class="f-title">' + esc(n.title) + '</div>';
+    // evidence: analysis findings carry a pre-escaped `evidence`; ML findings a
+    // raw `detail`. Escape only the raw one to avoid double-escaping.
+    let evidenceHtml = '';
+    if (f.evidence != null && f.evidence !== '') evidenceHtml = f.evidence; // already escaped
+    else if (f.detail) evidenceHtml = esc(f.detail);
+    if (evidenceHtml) html += '<div class="f-evidence">' + evidenceHtml + '</div>';
+    html += '</div></div>';
+    return html;
+  }
+
+  /* ---- sidebar queue counts --------------------------------------------- */
+  async function refreshSidebarCounts() {
+    try {
+      const [nr, q] = await Promise.all([
+        SentinelAPI.needsReviewList().catch(() => []),
+        SentinelAPI.quarantineList().catch(() => []),
+      ]);
+      setCount('navNeedsReview', nr.length);
+      setCount('navQuarantine', q.length);
+    } catch (e) { /* non-fatal chrome */ }
+  }
+  function setCount(id, n) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (n > 0) { el.textContent = n; el.hidden = false; }
+    else { el.hidden = true; }
+  }
+
+  /* ---- top-bar protection pill ------------------------------------------ */
+  async function refreshProtectionPill() {
+    const pill = document.getElementById('protectionPill');
+    if (!pill) return;
+    const dot = document.getElementById('protectionDot');
+    const text = document.getElementById('protectionText');
+    try {
+      const data = await SentinelAPI.gmailStatus();
+      const conn = data.connection;
+      pill.hidden = false;
+      if (!conn) {
+        dot.className = 'status-dot off';
+        text.textContent = 'No mailbox connected';
+      } else if (conn.connection_status === 'connected' && conn.protection_enabled) {
+        dot.className = 'status-dot ok';
+        text.textContent = 'Protection active';
+      } else if (conn.connection_status === 'paused' || !conn.protection_enabled) {
+        dot.className = 'status-dot warn';
+        text.textContent = 'Protection paused';
+      } else {
+        dot.className = 'status-dot bad';
+        text.textContent = 'Attention needed';
+      }
+    } catch (e) {
+      pill.hidden = true; /* not admin / offline — stay quiet */
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    refreshSidebarCounts();
+    refreshProtectionPill();
+  });
+
+  window.AdminUI = {
+    verdictBadge, riskBadge, statusBadge, sourceLabel, pct,
+    normFinding, findingHtml, refreshSidebarCounts, refreshProtectionPill,
+  };
+})();

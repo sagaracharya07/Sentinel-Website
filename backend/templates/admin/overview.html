@@ -1,0 +1,54 @@
+{% extends "base_admin.html" %}
+{% block title %}Overview — Sentinel AI Console{% endblock %}
+{% block page_title %}Overview{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Security overview</h1>
+  <p>Live status of your connected mailbox, recent detections, and queue health. All figures are drawn from real detection data.</p>
+</div>
+
+<section class="panel" style="margin-bottom:var(--sp-5)">
+  <div class="panel-head">
+    <svg class="icon" aria-hidden="true"><use href="#i-plug"></use></svg>
+    <h3>Protection</h3>
+    <div class="row" style="margin-left:auto">
+      <button class="btn btn-sm" id="scanNowBtn"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg> Scan now</button>
+      <a class="btn btn-sm btn-ghost" href="/admin/mailboxes">Connected mailboxes</a>
+    </div>
+  </div>
+  <div class="panel-body" id="protectionPanel">
+    <div class="state"><span class="spinner" aria-hidden="true"></span><div class="state-msg">Loading protection status…</div></div>
+  </div>
+</section>
+
+<div class="metric-grid" id="metricGrid" aria-live="polite">
+  {% for i in range(4) %}
+  <div class="metric"><div class="skeleton line" style="width:40%"></div><div class="skeleton line" style="width:60%;height:26px"></div></div>
+  {% endfor %}
+</div>
+
+<div class="grid-2col" style="margin-top:var(--sp-5)">
+  <section class="panel">
+    <div class="panel-head">
+      <svg class="icon" aria-hidden="true"><use href="#i-activity"></use></svg>
+      <h3>Live detection feed</h3>
+      <a class="btn btn-sm btn-ghost" href="/admin/detections" style="margin-left:auto">View all</a>
+    </div>
+    <div id="feed"><div class="state"><span class="spinner" aria-hidden="true"></span></div></div>
+  </section>
+
+  <div class="stack">
+    <section class="panel">
+      <div class="panel-head"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg><h3>Verdict distribution</h3></div>
+      <div class="panel-body" id="dist"><div class="skeleton line"></div><div class="skeleton line"></div><div class="skeleton line"></div></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg><h3>Recent activity</h3></div>
+      <div class="panel-body" id="activity"><div class="skeleton line"></div><div class="skeleton line"></div></div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/overview.js') }}"></script>
+{% endblock %}

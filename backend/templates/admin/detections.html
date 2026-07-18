@@ -1,0 +1,43 @@
+{% extends "base_admin.html" %}
+{% block title %}Detections — Sentinel AI Console{% endblock %}
+{% block page_title %}Detections{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Detections</h1>
+  <p>Every email analysed by Sentinel — automatic and reported. Select a row to open the full incident.</p>
+</div>
+
+<div class="toolbar">
+  <label class="search">
+    <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+    <input type="search" id="senderSearch" placeholder="Search sender…" aria-label="Search sender">
+  </label>
+  <select id="fClassification" class="input" style="max-width:170px" aria-label="Verdict filter">
+    <option value="">All verdicts</option>
+    <option>Legitimate</option><option>Needs Review</option><option>Phishing</option>
+  </select>
+  <select id="fStatus" class="input" style="max-width:160px" aria-label="Status filter">
+    <option value="">All statuses</option>
+    <option>Delivered</option><option>Flagged</option><option>Quarantined</option>
+  </select>
+  <select id="fSource" class="input" style="max-width:160px" aria-label="Source filter">
+    <option value="">All sources</option>
+    <option value="gmail">Gmail</option><option value="upload">.eml Upload</option>
+    <option value="manual">Quick Analysis</option><option value="mailbox">IMAP</option>
+  </select>
+  <select id="fRisk" class="input" style="max-width:150px" aria-label="Risk filter">
+    <option value="">All risk</option><option>Low</option><option>Medium</option><option>High</option>
+  </select>
+  <button class="btn btn-ghost btn-sm" id="clearFilters">Clear</button>
+  <span class="muted mono" id="resultCount" style="margin-left:auto;font-size:.8rem"></span>
+</div>
+
+<section class="panel">
+  <div id="detBody">
+    <div class="state"><span class="spinner" aria-hidden="true"></span></div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/detections.js') }}"></script>
+{% endblock %}

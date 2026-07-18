@@ -1,0 +1,43 @@
+{% extends "base_admin.html" %}
+{% block title %}Connected Mailboxes — Sentinel AI Console{% endblock %}
+{% block page_title %}Connected Mailboxes{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Connected Mailboxes</h1>
+  <p>Connect a Gmail mailbox with Google OAuth so Sentinel can monitor incoming mail, label results, and quarantine phishing. Sentinel stores an encrypted refresh token — never your Google password, and never shown here.</p>
+</div>
+
+<div id="banner" role="status" hidden></div>
+
+<div class="grid-2col">
+  <section class="panel">
+    <div class="panel-head">
+      <span class="status-dot off" id="mbDot"></span>
+      <h3>Gmail</h3>
+      <span class="badge badge-muted" id="mbPill" style="margin-left:auto">loading…</span>
+    </div>
+    <div class="panel-body" id="mbPanel">
+      <div class="state"><span class="spinner" aria-hidden="true"></span></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><h3>How connecting works</h3></div>
+    <div class="panel-body">
+      <div class="steps">
+        <div class="step"><span class="step-dot">1</span> Select Gmail and continue to Google</div>
+        <div class="step"><span class="step-dot">2</span> Grant Sentinel the requested permissions</div>
+        <div class="step"><span class="step-dot">3</span> Sentinel verifies its Gmail labels</div>
+        <div class="step"><span class="step-dot">4</span> Protection activates and monitoring begins</div>
+      </div>
+      <div class="callout" style="margin-top:var(--sp-4)">
+        <svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>
+        <div>Access tokens, refresh tokens and secrets are never displayed on this page or returned by the API.</div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/mailboxes.js') }}"></script>
+{% endblock %}

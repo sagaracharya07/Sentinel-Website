@@ -1,0 +1,15 @@
+{% extends "base_admin.html" %}
+{% block title %}Quarantine — Sentinel AI Console{% endblock %}
+{% block page_title %}Quarantine{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Quarantine</h1>
+  <p>Messages moved out of the inbox in the connected mailbox. Release restores a message to the inbox — and only reports success once Gmail confirms it.</p>
+</div>
+<section class="panel">
+  <div id="queueBody"><div class="state"><span class="spinner" aria-hidden="true"></span></div></div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/quarantine.js') }}"></script>
+{% endblock %}
