@@ -158,6 +158,34 @@
     });
   }
 
+  /* ---- polling with automatic pause on a hidden tab --------------------- */
+  /* Live operational updates use short polling (the smallest option that
+     covers every admin page without a persistent connection) rather than
+     WebSockets/SSE. Pausing on visibilitychange avoids burning requests and
+     server load on tabs nobody's looking at, and refreshes immediately the
+     moment the tab becomes visible again instead of waiting out the interval. */
+  function startPolling(fn, intervalMs) {
+    let timer = null;
+    let stopped = false;
+    function tick() {
+      if (document.hidden || stopped) return;
+      fn();
+    }
+    function start() {
+      if (timer) return;
+      timer = setInterval(tick, intervalMs);
+    }
+    function stop() {
+      stopped = true;
+      if (timer) { clearInterval(timer); timer = null; }
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && !stopped) fn(); // refresh immediately on return
+    });
+    start();
+    return stop;
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     initMotionPreference();
     wireToggles();
@@ -166,6 +194,6 @@
   });
 
   window.SentinelUI = {
-    esc, toast, relTime, absTime, setState, openOverlay, closeOverlay, mountUserBadge,
+    esc, toast, relTime, absTime, setState, openOverlay, closeOverlay, mountUserBadge, startPolling,
   };
 })();

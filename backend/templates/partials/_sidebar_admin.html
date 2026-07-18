@@ -8,50 +8,50 @@
 
   <div class="side-group">
     <div class="side-group-label">Operations</div>
-    <a href="/admin" class="side-link {{ 'active' if active_nav == 'overview' }}">
+    <a href="/admin" class="side-link {{ 'active' if active_nav == 'overview' }}" {{ ('aria-current="page"' if active_nav == 'overview' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg> Overview</a>
-    <a href="/admin/detections" class="side-link {{ 'active' if active_nav == 'detections' }}">
+    <a href="/admin/detections" class="side-link {{ 'active' if active_nav == 'detections' }}" {{ ('aria-current="page"' if active_nav == 'detections' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-activity"></use></svg> Detections</a>
-    <a href="/admin/needs-review" class="side-link {{ 'active' if active_nav == 'needs-review' }}">
+    <a href="/admin/needs-review" class="side-link {{ 'active' if active_nav == 'needs-review' }}" {{ ('aria-current="page"' if active_nav == 'needs-review' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg> Needs Review
       <span class="side-count alert" id="navNeedsReview" hidden>0</span></a>
-    <a href="/admin/quarantine" class="side-link {{ 'active' if active_nav == 'quarantine' }}">
+    <a href="/admin/quarantine" class="side-link {{ 'active' if active_nav == 'quarantine' }}" {{ ('aria-current="page"' if active_nav == 'quarantine' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg> Quarantine
       <span class="side-count" id="navQuarantine" hidden>0</span></a>
-    <a href="/admin/reports" class="side-link {{ 'active' if active_nav == 'reports' }}">
+    <a href="/admin/reports" class="side-link {{ 'active' if active_nav == 'reports' }}" {{ ('aria-current="page"' if active_nav == 'reports' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-inbox"></use></svg> Reported Emails</a>
   </div>
 
   <div class="side-group">
     <div class="side-group-label">Mailboxes</div>
-    <a href="/admin/mailboxes" class="side-link {{ 'active' if active_nav == 'mailboxes' }}">
+    <a href="/admin/mailboxes" class="side-link {{ 'active' if active_nav == 'mailboxes' }}" {{ ('aria-current="page"' if active_nav == 'mailboxes' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-plug"></use></svg> Connected Mailboxes</a>
   </div>
 
   <div class="side-group">
     <div class="side-group-label">Insight</div>
-    <a href="/admin/analytics" class="side-link {{ 'active' if active_nav == 'analytics' }}">
+    <a href="/admin/analytics" class="side-link {{ 'active' if active_nav == 'analytics' }}" {{ ('aria-current="page"' if active_nav == 'analytics' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg> Analytics</a>
-    <a href="/admin/audit" class="side-link {{ 'active' if active_nav == 'audit' }}">
+    <a href="/admin/audit" class="side-link {{ 'active' if active_nav == 'audit' }}" {{ ('aria-current="page"' if active_nav == 'audit' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg> Audit Log</a>
   </div>
 
   <div class="side-group">
     <div class="side-group-label">Platform</div>
-    <a href="/admin/model" class="side-link {{ 'active' if active_nav == 'model' }}">
+    <a href="/admin/model" class="side-link {{ 'active' if active_nav == 'model' }}" {{ ('aria-current="page"' if active_nav == 'model' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-pulse"></use></svg> Model Management</a>
-    <a href="/admin/health" class="side-link {{ 'active' if active_nav == 'health' }}">
+    <a href="/admin/health" class="side-link {{ 'active' if active_nav == 'health' }}" {{ ('aria-current="page"' if active_nav == 'health' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-server"></use></svg> System Health</a>
-    <a href="/admin/failed" class="side-link {{ 'active' if active_nav == 'failed' }}">
+    <a href="/admin/failed" class="side-link {{ 'active' if active_nav == 'failed' }}" {{ ('aria-current="page"' if active_nav == 'failed' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg> Failed Processing</a>
-    <a href="/admin/tasks" class="side-link {{ 'active' if active_nav == 'tasks' }}">
+    <a href="/admin/tasks" class="side-link {{ 'active' if active_nav == 'tasks' }}" {{ ('aria-current="page"' if active_nav == 'tasks' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg> Background Tasks</a>
-    <a href="/admin/users" class="side-link {{ 'active' if active_nav == 'users' }}">
+    <a href="/admin/users" class="side-link {{ 'active' if active_nav == 'users' }}" {{ ('aria-current="page"' if active_nav == 'users' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-users"></use></svg> Users &amp; Roles</a>
   </div>
 
   <div class="side-foot">
-    <a href="/admin/settings/general" class="side-link {{ 'active' if active_nav == 'settings' }}">
+    <a href="/admin/settings/general" class="side-link {{ 'active' if active_nav == 'settings' }}" {{ ('aria-current="page"' if active_nav == 'settings' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-settings"></use></svg> Settings</a>
     <a href="#" class="side-link" data-signout>
       <svg class="icon" aria-hidden="true"><use href="#i-signout"></use></svg> Sign out</a>

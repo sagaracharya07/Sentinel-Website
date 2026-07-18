@@ -65,6 +65,13 @@
 .flow-lane.threat { border-color: rgba(255,77,94,.3); }
 .flow-caption { text-align: center; font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--sp-3); }
 
+/* Pause-animations control (required for any long-running ambient effect --
+   see foundation.css's global prefers-reduced-motion override for the
+   OS-level equivalent; this is the manual, per-page toggle). */
+.flow-anim.paused .flow-node,
+.flow-anim.paused .flow-node .icon,
+.flow-anim.paused .flow-node .dot { animation-play-state: paused; }
+
 /* ---- Section headers ------------------------------------------------------ */
 .section-head { max-width: 640px; margin-bottom: var(--sp-6); }
 .section-head.center { margin-inline: auto; text-align: center; }

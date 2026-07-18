@@ -28,14 +28,17 @@
       '<th>Submitted</th><th>Subject</th><th>Automated</th><th>Status</th></tr></thead><tbody>' +
       recent.map((r) => {
         const scan = r.scan || {};
-        return '<tr class="clickable" data-href="/app/reports/' + r.id + '">' +
+        return '<tr class="clickable" data-href="/app/reports/' + r.id + '" tabindex="0">' +
           '<td data-label="Submitted" class="muted mono" style="font-size:.8rem">' + esc(relTime(r.created_at)) + '</td>' +
           '<td data-label="Subject">' + esc(scan.subject || r.filename || '(no subject)') + '</td>' +
           '<td data-label="Automated">' + P.verdictBadge(scan.classification) + '</td>' +
           '<td data-label="Status">' + P.reportStatusBadge(r) + '</td></tr>';
       }).join('') + '</tbody></table></div>';
-    el.querySelectorAll('tr[data-href]').forEach((tr) =>
-      tr.addEventListener('click', () => { window.location.href = tr.getAttribute('data-href'); }));
+    el.querySelectorAll('tr[data-href]').forEach((tr) => {
+      const go = () => { window.location.href = tr.getAttribute('data-href'); };
+      tr.addEventListener('click', go);
+      tr.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+    });
   }
 
   async function load() {

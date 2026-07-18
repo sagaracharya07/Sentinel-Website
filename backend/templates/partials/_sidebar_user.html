@@ -6,22 +6,22 @@
   </a>
 
   <nav class="side-group" aria-label="Portal">
-    <a href="/app" class="side-link {{ 'active' if active_nav == 'overview' }}">
+    <a href="/app" class="side-link {{ 'active' if active_nav == 'overview' }}" {{ ('aria-current="page"' if active_nav == 'overview' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg> Overview</a>
-    <a href="/app/report" class="side-link {{ 'active' if active_nav == 'report' }}">
+    <a href="/app/report" class="side-link {{ 'active' if active_nav == 'report' }}" {{ ('aria-current="page"' if active_nav == 'report' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg> Report Email</a>
-    <a href="/app/reports" class="side-link {{ 'active' if active_nav == 'reports' }}">
+    <a href="/app/reports" class="side-link {{ 'active' if active_nav == 'reports' }}" {{ ('aria-current="page"' if active_nav == 'reports' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg> My Reports</a>
-    <a href="/app/quick-analysis" class="side-link {{ 'active' if active_nav == 'quick' }}">
+    <a href="/app/quick-analysis" class="side-link {{ 'active' if active_nav == 'quick' }}" {{ ('aria-current="page"' if active_nav == 'quick' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg> Quick Analysis</a>
-    <a href="/app/guide" class="side-link {{ 'active' if active_nav == 'guide' }}">
+    <a href="/app/guide" class="side-link {{ 'active' if active_nav == 'guide' }}" {{ ('aria-current="page"' if active_nav == 'guide' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg> Security Guide</a>
   </nav>
 
   <div class="side-foot">
-    <a href="/app/account" class="side-link {{ 'active' if active_nav == 'account' }}">
+    <a href="/app/account" class="side-link {{ 'active' if active_nav == 'account' }}" {{ ('aria-current="page"' if active_nav == 'account' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg> Account</a>
-    <a href="/app/preferences" class="side-link {{ 'active' if active_nav == 'preferences' }}">
+    <a href="/app/preferences" class="side-link {{ 'active' if active_nav == 'preferences' }}" {{ ('aria-current="page"' if active_nav == 'preferences' else '') | safe }}>
       <svg class="icon" aria-hidden="true"><use href="#i-settings"></use></svg> Preferences</a>
     <a href="#" class="side-link" data-signout>
       <svg class="icon" aria-hidden="true"><use href="#i-signout"></use></svg> Sign out</a>

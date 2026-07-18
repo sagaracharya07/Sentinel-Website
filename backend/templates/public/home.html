@@ -16,8 +16,11 @@
     </div>
 
     <div class="flow-card reveal">
-      <div class="flow-title">Detection flow — illustrative</div>
-      <div class="flow-nodes flow-anim">
+      <div class="row-wrap" style="margin-bottom:var(--sp-3)">
+        <div class="flow-title" style="margin-bottom:0">Detection flow — illustrative</div>
+        <button type="button" class="btn btn-ghost btn-sm" id="pauseAnimBtn" style="margin-left:auto;padding:5px 10px" aria-pressed="false">Pause animation</button>
+      </div>
+      <div class="flow-nodes flow-anim" id="flowAnim">
         <div class="flow-node"><svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg> Sender identity checked<span class="dot"></span></div>
         <div class="flow-node"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg> Authentication verified (SPF/DKIM/DMARC)<span class="dot"></span></div>
         <div class="flow-node"><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg> Links &amp; attachments inspected<span class="dot"></span></div>
@@ -109,7 +112,7 @@
   <div class="stat-row">
     <div class="stat-box reveal"><b>~96.1%</b><span>Accuracy (held-out test)</span></div>
     <div class="stat-box reveal" data-reveal-delay="60"><b>7,539</b><span>Test-set messages</span></div>
-    <div class="stat-box reveal" data-reveal-delay="120"><b>264</b><span>Automated tests</span></div>
+    <div class="stat-box reveal" data-reveal-delay="120"><b>287</b><span>Automated tests</span></div>
     <div class="stat-box reveal" data-reveal-delay="180"><b>3</b><span>Verdict states</span></div>
   </div>
   <p class="muted center" style="margin-top:var(--sp-4);font-size:.85rem">The project model achieved approximately 96.1% accuracy on its held-out evaluation dataset (v1, n=7,539). See <a href="/about">About the Project</a> for the full methodology.</p>
@@ -123,4 +126,7 @@
     <a href="/product" class="btn btn-ghost btn-lg">Explore the product</a>
   </div>
 </section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/public/home.js') }}"></script>
 {% endblock %}

@@ -89,7 +89,7 @@
         '<div class="table-wrap"><table class="data cards-on-mobile"><thead><tr>' +
         '<th>Time</th><th>Sender</th><th>Subject</th><th>Verdict</th></tr></thead><tbody>' +
         rows.map((r) =>
-          '<tr class="clickable" data-href="/admin/detections/' + encodeURIComponent(r.scan_id) + '">' +
+          '<tr class="clickable" data-href="/admin/detections/' + encodeURIComponent(r.scan_id) + '" tabindex="0">' +
           '<td data-label="Time" class="muted mono" style="font-size:.8rem">' + esc(relTime(r.scan_timestamp)) + '</td>' +
           '<td data-label="Sender">' + esc(r.from || '—') + '</td>' +
           '<td data-label="Subject">' + esc(r.subject || '(no subject)') + '</td>' +
@@ -140,7 +140,9 @@
 
   function wireRowNav(container) {
     container.querySelectorAll('tr[data-href]').forEach((tr) => {
-      tr.addEventListener('click', () => { window.location.href = tr.getAttribute('data-href'); });
+      const go = () => { window.location.href = tr.getAttribute('data-href'); };
+      tr.addEventListener('click', go);
+      tr.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
     });
   }
 
@@ -157,4 +159,14 @@
   });
 
   loadProtection(); loadMetrics(); loadFeed(); loadDist(); loadActivity();
+
+  // Live operational updates: re-fetch the same real data every 20s so a
+  // detection that arrives while this page is open shows up without a
+  // manual reload. Pauses automatically while the tab is hidden (see
+  // SentinelUI.startPolling) -- this is short polling, not a persistent
+  // connection, chosen as the smallest option that works for every admin
+  // page without adding a WebSocket/SSE server dependency.
+  window.SentinelUI.startPolling(() => {
+    loadProtection(); loadMetrics(); loadFeed(); loadDist(); loadActivity();
+  }, 20000);
 })();

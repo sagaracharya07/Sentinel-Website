@@ -6,13 +6,13 @@
       Sentinel<span class="brand-accent">AI</span>
     </a>
     <div class="links">
-      <a href="/product"        class="{{ 'active' if active_page == 'product' }}">Product</a>
-      <a href="/how-it-works"   class="{{ 'active' if active_page == 'how-it-works' }}">How It Works</a>
-      <a href="/integrations"   class="{{ 'active' if active_page == 'integrations' }}">Integrations</a>
-      <a href="/demo"           class="{{ 'active' if active_page == 'demo' }}">Live Demo</a>
-      <a href="/threat-lab"     class="{{ 'active' if active_page == 'threat-lab' }}">Threat Lab</a>
-      <a href="/security"       class="{{ 'active' if active_page == 'security' }}">Security</a>
-      <a href="/about"          class="{{ 'active' if active_page == 'about' }}">About</a>
+      <a href="/product"        class="{{ 'active' if active_page == 'product' }}" {{ ('aria-current="page"' if active_page == 'product' else '') | safe }}>Product</a>
+      <a href="/how-it-works"   class="{{ 'active' if active_page == 'how-it-works' }}" {{ ('aria-current="page"' if active_page == 'how-it-works' else '') | safe }}>How It Works</a>
+      <a href="/integrations"   class="{{ 'active' if active_page == 'integrations' }}" {{ ('aria-current="page"' if active_page == 'integrations' else '') | safe }}>Integrations</a>
+      <a href="/demo"           class="{{ 'active' if active_page == 'demo' }}" {{ ('aria-current="page"' if active_page == 'demo' else '') | safe }}>Live Demo</a>
+      <a href="/threat-lab"     class="{{ 'active' if active_page == 'threat-lab' }}" {{ ('aria-current="page"' if active_page == 'threat-lab' else '') | safe }}>Threat Lab</a>
+      <a href="/security"       class="{{ 'active' if active_page == 'security' }}" {{ ('aria-current="page"' if active_page == 'security' else '') | safe }}>Security</a>
+      <a href="/about"          class="{{ 'active' if active_page == 'about' }}" {{ ('aria-current="page"' if active_page == 'about' else '') | safe }}>About</a>
     </div>
     <div class="nav-cta">
       {% if session.get('username') %}

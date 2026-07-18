@@ -121,6 +121,14 @@
   document.addEventListener('DOMContentLoaded', () => {
     refreshSidebarCounts();
     refreshProtectionPill();
+    // Live operational updates: queue counts and the protection pill are
+    // chrome on every admin page, so they poll independently of whatever
+    // page-specific refresh a given page does. Pauses automatically when
+    // the tab isn't visible (see SentinelUI.startPolling).
+    window.SentinelUI.startPolling(() => {
+      refreshSidebarCounts();
+      refreshProtectionPill();
+    }, 30000);
   });
 
   window.AdminUI = {

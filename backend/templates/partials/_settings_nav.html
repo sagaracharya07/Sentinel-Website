@@ -1,12 +1,12 @@
 {# Settings sub-navigation rail, included by every admin/settings/*.html page.
    `active_settings` marks the current page. #}
 <nav class="chips" aria-label="Settings sections" style="flex-direction:column;align-items:stretch;gap:4px">
-  <a href="/admin/settings/general" class="chip {{ 'active' if active_settings == 'general' }}" style="text-align:left">General</a>
-  <a href="/admin/settings/gmail" class="chip {{ 'active' if active_settings == 'gmail' }}" style="text-align:left">Gmail Protection</a>
-  <a href="/admin/settings/detection-policy" class="chip {{ 'active' if active_settings == 'detection-policy' }}" style="text-align:left">Detection Policy</a>
-  <a href="/admin/settings/reporting" class="chip {{ 'active' if active_settings == 'reporting' }}" style="text-align:left">Reporting</a>
-  <a href="/admin/settings/security" class="chip {{ 'active' if active_settings == 'security' }}" style="text-align:left">Security</a>
-  <a href="/admin/settings/integrations" class="chip {{ 'active' if active_settings == 'integrations' }}" style="text-align:left">Integrations</a>
-  <a href="/admin/health" class="chip {{ 'active' if active_settings == 'health' }}" style="text-align:left">System Health</a>
-  <a href="/admin/settings/appearance" class="chip {{ 'active' if active_settings == 'appearance' }}" style="text-align:left">Appearance</a>
+  <a href="/admin/settings/general" class="chip {{ 'active' if active_settings == 'general' }}" {{ ('aria-current="page"' if active_settings == 'general' else '') | safe }} style="text-align:left">General</a>
+  <a href="/admin/settings/gmail" class="chip {{ 'active' if active_settings == 'gmail' }}" {{ ('aria-current="page"' if active_settings == 'gmail' else '') | safe }} style="text-align:left">Gmail Protection</a>
+  <a href="/admin/settings/detection-policy" class="chip {{ 'active' if active_settings == 'detection-policy' }}" {{ ('aria-current="page"' if active_settings == 'detection-policy' else '') | safe }} style="text-align:left">Detection Policy</a>
+  <a href="/admin/settings/reporting" class="chip {{ 'active' if active_settings == 'reporting' }}" {{ ('aria-current="page"' if active_settings == 'reporting' else '') | safe }} style="text-align:left">Reporting</a>
+  <a href="/admin/settings/security" class="chip {{ 'active' if active_settings == 'security' }}" {{ ('aria-current="page"' if active_settings == 'security' else '') | safe }} style="text-align:left">Security</a>
+  <a href="/admin/settings/integrations" class="chip {{ 'active' if active_settings == 'integrations' }}" {{ ('aria-current="page"' if active_settings == 'integrations' else '') | safe }} style="text-align:left">Integrations</a>
+  <a href="/admin/health" class="chip" style="text-align:left">System Health</a>
+  <a href="/admin/settings/appearance" class="chip {{ 'active' if active_settings == 'appearance' }}" {{ ('aria-current="page"' if active_settings == 'appearance' else '') | safe }} style="text-align:left">Appearance</a>
 </nav>
