@@ -1,0 +1,59 @@
+{% extends "base_portal.html" %}
+{% block title %}Security Guide — Sentinel AI{% endblock %}
+{% block page_title %}Security Guide{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Security Guide</h1>
+  <p>How to spot suspicious email, how to report it, and what Sentinel's verdicts mean.</p>
+</div>
+
+<div class="grid-2col">
+  <div class="stack">
+    <section class="card">
+      <h3 style="margin-bottom:var(--sp-3)">Common warning signs</h3>
+      <div class="stack-sm">
+        <div class="finding"><span class="sev high"></span><div><div class="f-title">Urgency or pressure language</div><div class="f-evidence">"verify now", "your account will be suspended", "act immediately"</div></div></div>
+        <div class="finding"><span class="sev high"></span><div><div class="f-title">Requests for sensitive information</div><div class="f-evidence">Passwords, card numbers, or verification codes — legitimate services rarely ask by email</div></div></div>
+        <div class="finding"><span class="sev medium"></span><div><div class="f-title">Sender / brand mismatch</div><div class="f-evidence">Display name says "PayPal" but the domain is something else entirely</div></div></div>
+        <div class="finding"><span class="sev medium"></span><div><div class="f-title">Links that don't go where they claim</div><div class="f-evidence">Displayed text shows one domain, the real destination is another</div></div></div>
+        <div class="finding"><span class="sev low"></span><div><div class="f-title">Generic greetings</div><div class="f-evidence">"Dear Customer" instead of your name</div></div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 style="margin-bottom:var(--sp-3)">How to get the original .eml file</h3>
+      <p class="muted" style="font-size:.88rem;margin-bottom:var(--sp-3)">The original file preserves headers, authentication results, and real link destinations — pasted text cannot.</p>
+      <div class="kv" style="grid-template-columns:100px 1fr">
+        <dt>Gmail</dt><dd>Open the message → ⋮ (more) → "Show original" → "Download original"</dd>
+        <dt>Outlook</dt><dd>Drag the message from the list onto your desktop, or File → Save As</dd>
+      </div>
+    </section>
+  </div>
+
+  <div class="stack">
+    <section class="card">
+      <h3 style="margin-bottom:var(--sp-3)">What Sentinel's verdicts mean</h3>
+      <div class="stack-sm">
+        <div class="row"><span class="badge badge-legit">Legitimate</span><span class="muted" style="font-size:.85rem">Low estimated risk — no action needed</span></div>
+        <div class="row"><span class="badge badge-review">Needs Review</span><span class="muted" style="font-size:.85rem">Uncertain — an administrator will investigate</span></div>
+        <div class="row"><span class="badge badge-phish">Phishing</span><span class="muted" style="font-size:.85rem">High estimated risk — quarantined where possible</span></div>
+      </div>
+      <p class="muted" style="font-size:.85rem;margin-top:var(--sp-4)">
+        <strong>Phishing probability</strong> is the model's estimated likelihood a message is phishing.
+        <strong>Prediction confidence</strong> is how sure the model is of whichever label it picked — a message
+        can be 95% confidently legitimate, which is different from being "5% phishing".
+      </p>
+    </section>
+
+    <section class="card">
+      <h3 style="margin-bottom:var(--sp-3)">Why human review matters</h3>
+      <p class="muted" style="font-size:.88rem">Sentinel's classifier achieves strong accuracy on its held-out test set, but no automated system is perfect. "Needs Review" exists so uncertain cases go to a person instead of being silently guessed one way or the other — and every automated verdict can be corrected by an administrator.</p>
+    </section>
+
+    <section class="callout">
+      <svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg>
+      <div>Still unsure about a message? Report it — a false alarm costs a minute of an administrator's time; a missed phishing email can cost far more.</div>
+    </section>
+  </div>
+</div>
+{% endblock %}

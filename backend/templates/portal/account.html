@@ -1,0 +1,43 @@
+{% extends "base_portal.html" %}
+{% block title %}Account — Sentinel AI{% endblock %}
+{% block page_title %}Account{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Account</h1>
+  <p>Your account details and password.</p>
+</div>
+
+<div class="grid-2col">
+  <section class="card">
+    <h3 style="margin-bottom:var(--sp-4)">Account details</h3>
+    <div class="kv" style="grid-template-columns:110px 1fr">
+      <dt>Username</dt><dd id="acctUsername">—</dd>
+      <dt>Role</dt><dd id="acctRole">—</dd>
+      <dt>Email</dt><dd id="acctEmail">—</dd>
+      <dt>Verified</dt><dd id="acctVerified">—</dd>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3 style="margin-bottom:var(--sp-4)">Change password</h3>
+    <form id="changePasswordForm">
+      <div class="field">
+        <label class="field-label" for="currentPassword">Current password</label>
+        <input type="password" id="currentPassword" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label class="field-label" for="newPassword">New password</label>
+        <input type="password" id="newPassword" autocomplete="new-password" required minlength="8">
+      </div>
+      <button type="submit" class="btn btn-primary" id="changePasswordBtn">Update password</button>
+      <div class="field-error" id="errMsg"></div>
+      <div class="callout" id="successMsg" style="display:none;margin-top:var(--sp-3)">
+        <svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><div>Password updated.</div>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/portal/account.js') }}"></script>
+{% endblock %}

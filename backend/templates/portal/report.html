@@ -1,0 +1,57 @@
+{% extends "base_portal.html" %}
+{% block title %}Report Suspicious Email — Sentinel AI{% endblock %}
+{% block page_title %}Report Suspicious Email{% endblock %}
+{% block extra_style %}
+<style>
+  .dropzone {
+    border: 2px dashed var(--border-strong); border-radius: var(--radius-l);
+    padding: var(--sp-8) var(--sp-5); text-align: center; cursor: pointer;
+    transition: border-color var(--dur-2) var(--ease), background var(--dur-2) var(--ease);
+  }
+  .dropzone:hover, .dropzone.drag { border-color: var(--cyan); background: var(--cyan-wash); }
+  .dropzone .icon { width: 40px; height: 40px; color: var(--cyan); margin: 0 auto var(--sp-3); }
+  .dropzone input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Report Suspicious Email</h1>
+  <p>Upload the original <code>.eml</code> file for the most accurate analysis — Sentinel parses full headers, authentication results, and real link destinations. Pasted text only supports <a href="/app/quick-analysis">Quick Analysis</a>, a more limited check.</p>
+</div>
+
+<div class="grid-2col">
+  <section class="panel">
+    <div class="panel-body">
+      <label class="dropzone" id="dropzone" for="emlFile" tabindex="0">
+        <svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg>
+        <div style="font-weight:600">Drop your <code>.eml</code> file here</div>
+        <div class="muted" style="font-size:.85rem;margin-top:6px">or click to browse — max 5&nbsp;MB, .eml only</div>
+        <input type="file" id="emlFile" accept=".eml">
+      </label>
+      <div id="fileInfo" class="muted mono" style="font-size:.82rem;margin-top:var(--sp-3)" hidden></div>
+
+      <div id="progressBox" class="stack" style="margin-top:var(--sp-5)" hidden>
+        <div class="steps">
+          <div class="step" data-step="validate"><span class="step-dot">1</span> Validating file</div>
+          <div class="step" data-step="upload"><span class="step-dot">2</span> Uploading and parsing</div>
+          <div class="step" data-step="analyse"><span class="step-dot">3</span> Analysing and creating report</div>
+        </div>
+      </div>
+
+      <div id="uploadError" class="field-error" style="margin-top:var(--sp-4)"></div>
+      <button class="btn btn-primary" id="uploadBtn" style="margin-top:var(--sp-4)" disabled>Upload and analyse</button>
+    </div>
+  </section>
+
+  <div class="stack">
+    <section class="card" id="resultCard" hidden></section>
+    <section class="card">
+      <h3 style="margin-bottom:var(--sp-3)">Not sure how to get the .eml file?</h3>
+      <p class="muted" style="font-size:.88rem">In Gmail: open the message → ⋮ menu → "Show original" → "Download original". In Outlook: drag the message to your desktop. See the <a href="/app/guide">Security Guide</a> for details.</p>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/portal/report.js') }}"></script>
+{% endblock %}

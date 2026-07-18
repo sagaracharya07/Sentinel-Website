@@ -100,3 +100,73 @@ def admin_mailboxes():
     if guard:
         return guard
     return render_template("admin/mailboxes.html", active_nav="mailboxes")
+
+
+# ---------------------------------------------------------------------------
+# User portal (any authenticated user -- employees and administrators alike;
+# an administrator can still report a suspicious email themselves)
+# ---------------------------------------------------------------------------
+@pages_bp.get("/app")
+def portal_overview():
+    guard = _require_login()
+    if guard:
+        return guard
+    return render_template("portal/overview.html", active_nav="overview")
+
+
+@pages_bp.get("/app/report")
+def portal_report():
+    guard = _require_login()
+    if guard:
+        return guard
+    return render_template("portal/report.html", active_nav="report")
+
+
+@pages_bp.get("/app/reports")
+def portal_reports():
+    guard = _require_login()
+    if guard:
+        return guard
+    return render_template("portal/reports.html", active_nav="reports")
+
+
+@pages_bp.get("/app/reports/<int:report_id>")
+def portal_report_detail(report_id):
+    guard = _require_login()
+    if guard:
+        return guard
+    return render_template(
+        "portal/report_detail.html", active_nav="reports", report_id=report_id
+    )
+
+
+@pages_bp.get("/app/quick-analysis")
+def portal_quick_analysis():
+    guard = _require_login()
+    if guard:
+        return guard
+    return render_template("portal/quick_analysis.html", active_nav="quick")
+
+
+@pages_bp.get("/app/guide")
+def portal_guide():
+    guard = _require_login()
+    if guard:
+        return guard
+    return render_template("portal/guide.html", active_nav="guide")
+
+
+@pages_bp.get("/app/account")
+def portal_account():
+    guard = _require_login()
+    if guard:
+        return guard
+    return render_template("portal/account.html", active_nav="account")
+
+
+@pages_bp.get("/app/preferences")
+def portal_preferences():
+    guard = _require_login()
+    if guard:
+        return guard
+    return render_template("portal/preferences.html", active_nav="preferences")

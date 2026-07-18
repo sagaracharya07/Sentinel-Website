@@ -1,0 +1,41 @@
+{% extends "base_portal.html" %}
+{% block title %}Preferences — Sentinel AI{% endblock %}
+{% block page_title %}Preferences{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Preferences</h1>
+  <p>Personal display preferences. Stored in this browser only.</p>
+</div>
+
+<section class="card" style="max-width:560px">
+  <div class="field">
+    <label class="field-label" for="prefMotion">Motion</label>
+    <select id="prefMotion" class="input">
+      <option value="normal">Show animations</option>
+      <option value="reduced">Reduce motion</option>
+    </select>
+    <div class="field-hint">Turns off non-essential animation across the app, in addition to your operating system's setting.</div>
+  </div>
+  <div class="field">
+    <label class="field-label" for="prefLanding">Default landing page</label>
+    <select id="prefLanding" class="input">
+      <option value="/app">Overview</option>
+      <option value="/app/reports">My Reports</option>
+      <option value="/app/report">Report Suspicious Email</option>
+    </select>
+  </div>
+  <div class="field">
+    <label class="field-label" for="prefPageSize">Rows per page</label>
+    <select id="prefPageSize" class="input">
+      <option value="25">25</option><option value="50">50</option><option value="100">100</option>
+    </select>
+  </div>
+  <button class="btn btn-primary" id="prefSaveBtn">Save preferences</button>
+  <div class="callout" id="prefSaved" style="display:none;margin-top:var(--sp-3)">
+    <svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><div>Preferences saved.</div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/portal/preferences.js') }}"></script>
+{% endblock %}

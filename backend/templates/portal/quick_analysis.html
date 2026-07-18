@@ -1,0 +1,38 @@
+{% extends "base_portal.html" %}
+{% block title %}Quick Analysis — Sentinel AI{% endblock %}
+{% block page_title %}Quick Analysis{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Quick Analysis</h1>
+  <p>Paste an email's sender, subject, and body for a fast, limited check. For a full investigation, use <a href="/app/report">Report Suspicious Email</a> with the original <code>.eml</code> file instead.</p>
+</div>
+
+<div class="callout warn" style="margin-bottom:var(--sp-5)">
+  <svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg>
+  <div>Pasted text cannot provide full headers, reliable authentication results (SPF/DKIM/DMARC), original HTML link destinations, or attachment metadata. Treat this as a quick, secondary check only.</div>
+</div>
+
+<div class="grid-2col">
+  <section class="card">
+    <div class="field">
+      <label class="field-label" for="qaFrom">From</label>
+      <input type="text" id="qaFrom" placeholder="e.g. PayPal Security &lt;security@paypa1-support.com&gt;">
+    </div>
+    <div class="field">
+      <label class="field-label" for="qaSubject">Subject</label>
+      <input type="text" id="qaSubject" placeholder="Email subject line">
+    </div>
+    <div class="field">
+      <label class="field-label" for="qaBody">Message body</label>
+      <textarea id="qaBody" placeholder="Paste the email body here…" required></textarea>
+    </div>
+    <div class="field-error" id="qaError"></div>
+    <button class="btn btn-primary" id="qaScanBtn">Run Quick Analysis</button>
+  </section>
+
+  <section class="card" id="qaResult" hidden></section>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/portal/quick_analysis.js') }}"></script>
+{% endblock %}

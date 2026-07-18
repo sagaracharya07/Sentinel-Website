@@ -1,0 +1,14 @@
+{% extends "base_portal.html" %}
+{% block title %}Report Detail — Sentinel AI{% endblock %}
+{% block page_title %}Report Detail{% endblock %}
+{% block content %}
+<a href="/app/reports" class="breadcrumbs" style="margin-bottom:var(--sp-3)">
+  <svg class="icon" aria-hidden="true" style="width:14px;height:14px"><use href="#i-arrow-left"></use></svg> Back to my reports</a>
+
+<div id="detailRoot" data-report-id="{{ report_id }}">
+  <div class="state"><span class="spinner" aria-hidden="true"></span><div class="state-msg">Loading report…</div></div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/portal/report_detail.js') }}"></script>
+{% endblock %}

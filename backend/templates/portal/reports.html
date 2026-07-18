@@ -1,0 +1,33 @@
+{% extends "base_portal.html" %}
+{% block title %}My Reports — Sentinel AI{% endblock %}
+{% block page_title %}My Reports{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>My Reports</h1>
+  <p>Every email you've reported, its automated verdict, and the administrator's final decision.</p>
+</div>
+
+<div class="toolbar">
+  <label class="search">
+    <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+    <input type="search" id="qSearch" placeholder="Search subject or sender…" aria-label="Search reports">
+  </label>
+  <select id="fStatus" class="input" style="max-width:190px" aria-label="Status filter">
+    <option value="">All statuses</option>
+    <option value="pending">Awaiting review</option>
+    <option value="reviewed">Reviewed</option>
+  </select>
+  <select id="fVerdict" class="input" style="max-width:190px" aria-label="Verdict filter">
+    <option value="">All verdicts</option>
+    <option>Legitimate</option><option>Needs Review</option><option>Phishing</option>
+  </select>
+  <span class="muted mono" id="resultCount" style="margin-left:auto;font-size:.8rem"></span>
+</div>
+
+<section class="panel">
+  <div id="listBody"><div class="state"><span class="spinner" aria-hidden="true"></span></div></div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/portal/reports.js') }}"></script>
+{% endblock %}

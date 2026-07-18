@@ -1,0 +1,50 @@
+{% extends "base_portal.html" %}
+{% block title %}Overview — Sentinel AI{% endblock %}
+{% block page_title %}Overview{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Your reports</h1>
+  <p>Track suspicious emails you've reported and see Sentinel's automated findings and the administrator's final decision.</p>
+</div>
+
+<div class="metric-grid" id="metricGrid">
+  {% for i in range(4) %}
+  <div class="metric"><div class="skeleton line" style="width:50%"></div><div class="skeleton line" style="width:35%;height:26px"></div></div>
+  {% endfor %}
+</div>
+
+<div class="grid-2col" style="margin-top:var(--sp-5)">
+  <section class="panel">
+    <div class="panel-head">
+      <svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg>
+      <h3>Recent reports</h3>
+      <a class="btn btn-sm btn-ghost" href="/app/reports" style="margin-left:auto">View all</a>
+    </div>
+    <div id="recentReports"><div class="state"><span class="spinner" aria-hidden="true"></span></div></div>
+  </section>
+
+  <div class="stack">
+    <section class="panel">
+      <div class="panel-head"><svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg><h3>Report an email</h3></div>
+      <div class="panel-body">
+        <p class="muted" style="font-size:.88rem;margin-bottom:var(--sp-4)">Upload the original <code>.eml</code> file for the most accurate analysis — full headers, authentication results, and real link destinations.</p>
+        <a href="/app/report" class="btn btn-primary btn-block">Report Suspicious Email</a>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg><h3>Report lifecycle</h3></div>
+      <div class="panel-body">
+        <div class="steps">
+          <div class="step done"><span class="step-dot">1</span> Submitted</div>
+          <div class="step done"><span class="step-dot">2</span> Automatically Analysed</div>
+          <div class="step active"><span class="step-dot">3</span> Awaiting Administrator Review</div>
+          <div class="step"><span class="step-dot">4</span> Final Decision</div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/portal/overview.js') }}"></script>
+{% endblock %}
