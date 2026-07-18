@@ -17,6 +17,7 @@ ml/artifacts/current.json file when object storage isn't configured --
 correct for docker-compose, which shares ml/artifacts/ via a volume
 instead (see docker-compose.yml).
 """
+
 import os
 import json
 import joblib
@@ -28,12 +29,21 @@ from ml import artifact_store
 HERE = os.path.dirname(os.path.abspath(__file__))
 ARTIFACTS_DIR = os.path.join(HERE, "artifacts")
 
-_state = {"version": None, "vectorizer": None, "scaler": None, "model": None, "meta": None, "metrics": None}
+_state = {
+    "version": None,
+    "vectorizer": None,
+    "scaler": None,
+    "model": None,
+    "meta": None,
+    "metrics": None,
+}
 
 
 def _load_version(version):
     version_dir = os.path.join(ARTIFACTS_DIR, version)
-    artifact_store.download_version(version_dir, version)  # no-op if not configured or already cached
+    artifact_store.download_version(
+        version_dir, version
+    )  # no-op if not configured or already cached
     vectorizer = joblib.load(os.path.join(version_dir, "tfidf_vectorizer.joblib"))
     scaler = joblib.load(os.path.join(version_dir, "scaler.joblib"))
     model = joblib.load(os.path.join(version_dir, "model.joblib"))
@@ -60,8 +70,14 @@ def _pointer_version():
 def reload():
     version = _pointer_version()
     vectorizer, scaler, model, meta, metrics = _load_version(version)
-    _state.update(version=version, vectorizer=vectorizer, scaler=scaler,
-                  model=model, meta=meta, metrics=metrics)
+    _state.update(
+        version=version,
+        vectorizer=vectorizer,
+        scaler=scaler,
+        model=model,
+        meta=meta,
+        metrics=metrics,
+    )
     return version
 
 
@@ -87,8 +103,14 @@ def promote(version: str) -> str:
         json.dump({"version": version}, f)
     artifact_store.set_current_version(version)
 
-    _state.update(version=version, vectorizer=vectorizer, scaler=scaler,
-                  model=model, meta=meta, metrics=metrics)
+    _state.update(
+        version=version,
+        vectorizer=vectorizer,
+        scaler=scaler,
+        model=model,
+        meta=meta,
+        metrics=metrics,
+    )
     return version
 
 
@@ -107,23 +129,52 @@ def _ensure_current():
 
 def current_info():
     _ensure_current()
-    return {"version": _state["version"], "meta": _state["meta"], "metrics": _state["metrics"]}
+    return {
+        "version": _state["version"],
+        "meta": _state["meta"],
+        "metrics": _state["metrics"],
+    }
+
+
+def decide(phishing_proba: float):
+    """
+    Three-state operational decision from a raw phishing probability.
+
+    A flat 0.5 cutoff meant a message the model was only 63% sure about
+    got the same "Phishing" label -- and the same weight in the UI -- as
+    one it was 99% sure about, which produced misleading verdicts on
+    borderline mail. Splitting the middle band into "Needs Review" makes
+    that uncertainty visible instead of silently rounding it down to
+    "Legitimate" or up to "Phishing".
+
+        >= 0.75  -> Phishing      (High risk)   -- quarantine
+        >= 0.50  -> Needs Review  (Medium risk) -- flag, do not quarantine
+        <  0.50  -> Legitimate    (Low risk)    -- no action
+    """
+    if phishing_proba >= 0.75:
+        return "Phishing", "High"
+    if phishing_proba >= 0.50:
+        return "Needs Review", "Medium"
+    return "Legitimate", "Low"
 
 
 def classify(subject: str, body: str, sender: str = ""):
     """
     Runs the full FR-SE-05..08 pipeline for one email: preprocessing ->
-    feature extraction -> Random Forest classification -> confidence
-    score + risk band + explainable findings. Returns a dict ready to be
+    feature extraction -> Random Forest classification -> probability +
+    risk band + explainable findings. Returns a dict ready to be
     persisted (Scan row) and returned to the front-end as JSON.
     """
     _ensure_current()
 
     from ml.features import engineered_features
 
-    row_df = pd.DataFrame([{"subject": subject or "", "body": body or "", "sender": sender or ""}])
-    X, _, _ = build_feature_matrix(row_df, vectorizer=_state["vectorizer"],
-                                    scaler=_state["scaler"], fit=False)
+    row_df = pd.DataFrame(
+        [{"subject": subject or "", "body": body or "", "sender": sender or ""}]
+    )
+    X, _, _ = build_feature_matrix(
+        row_df, vectorizer=_state["vectorizer"], scaler=_state["scaler"], fit=False
+    )
 
     model = _state["model"]
     proba = model.predict_proba(X)[0]
@@ -131,20 +182,25 @@ def classify(subject: str, body: str, sender: str = ""):
     phishing_idx = classes.index(1) if 1 in classes else len(classes) - 1
     phishing_proba = float(proba[phishing_idx])
 
-    label = "Phishing" if phishing_proba >= 0.5 else "Legitimate"
+    label, risk_level = decide(phishing_proba)
     score = round(phishing_proba * 100)
-    if score >= 70:
-        risk_level = "High"
-    elif score >= 40:
-        risk_level = "Medium"
-    else:
-        risk_level = "Low"
+
+    # prediction_confidence is how sure the model is of *whichever* label
+    # it picked -- not the same thing as phishing_probability. A message
+    # at 5% phishing probability is 95%-confidently legitimate, not
+    # "5% confident"; conflating the two under one "confidence" number
+    # was misleading for anything below the phishing threshold.
+    prediction_confidence = max(phishing_proba, 1 - phishing_proba)
 
     _, findings, highlights = engineered_features(subject, body, sender)
 
     return {
         "label": label,
-        "confidence": round(phishing_proba, 4),
+        "phishing_probability": round(phishing_proba, 4),
+        "prediction_confidence": round(prediction_confidence, 4),
+        "confidence": round(
+            phishing_proba, 4
+        ),  # deprecated alias of phishing_probability, kept for backward compat
         "score": score,
         "risk_level": risk_level,
         "findings": findings,

@@ -26,10 +26,17 @@ speaking the S3 API. Configure via env vars:
                                       S3 API even when the provider doesn't
                                       really have regions, e.g. MinIO)
 """
+
 import os
 import json
 
-ARTIFACT_FILES = ["tfidf_vectorizer.joblib", "scaler.joblib", "model.joblib", "meta.json", "metrics.json"]
+ARTIFACT_FILES = [
+    "tfidf_vectorizer.joblib",
+    "scaler.joblib",
+    "model.joblib",
+    "meta.json",
+    "metrics.json",
+]
 
 
 def enabled():
@@ -42,6 +49,7 @@ def _bucket():
 
 def _client():
     import boto3
+
     return boto3.client(
         "s3",
         endpoint_url=os.environ.get("ARTIFACT_STORE_ENDPOINT_URL") or None,
@@ -72,7 +80,9 @@ def upload_version(version_dir: str, version: str):
     client = _client()
     _ensure_bucket(client)
     for fname in ARTIFACT_FILES:
-        client.upload_file(os.path.join(version_dir, fname), _bucket(), f"{version}/{fname}")
+        client.upload_file(
+            os.path.join(version_dir, fname), _bucket(), f"{version}/{fname}"
+        )
 
 
 def set_current_version(version: str):
@@ -81,7 +91,11 @@ def set_current_version(version: str):
     if not enabled():
         return
     client = _client()
-    client.put_object(Bucket=_bucket(), Key="current.json", Body=json.dumps({"version": version}).encode())
+    client.put_object(
+        Bucket=_bucket(),
+        Key="current.json",
+        Body=json.dumps({"version": version}).encode(),
+    )
 
 
 def remote_pointer_version():
@@ -90,6 +104,7 @@ def remote_pointer_version():
     if not enabled():
         return None
     import botocore
+
     client = _client()
     try:
         obj = client.get_object(Bucket=_bucket(), Key="current.json")

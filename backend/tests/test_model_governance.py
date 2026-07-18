@@ -17,6 +17,7 @@ test suite, so:
   directly into the real directory and clobbered the real current.json;
   this fixture exists specifically to never do that again.
 """
+
 import json
 import os
 import shutil
@@ -29,7 +30,9 @@ from extensions import db
 from ml import infer
 
 
-REAL_ARTIFACTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ml", "artifacts")
+REAL_ARTIFACTS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ml", "artifacts"
+)
 
 
 @pytest.fixture()
@@ -49,21 +52,47 @@ def fake_second_version(app, tmp_path, monkeypatch):
     (tmp_path / "current.json").write_text(json.dumps({"version": "v1"}))
 
     with app.app_context():
-        db.session.add(ModelVersion(
-            version="vtest2", accuracy=0.9, precision=0.9, recall=0.9, f1_score=0.9,
-            false_positive_rate=0.1, false_negative_rate=0.1, n_train=100, n_test=20,
-            n_feedback_folded_in=0, notes="test candidate", is_current=False,
-        ))
-        db.session.add(ModelVersion(
-            version="v1", accuracy=0.96, precision=0.95, recall=0.97, f1_score=0.96,
-            false_positive_rate=0.05, false_negative_rate=0.03, n_train=30000, n_test=7500,
-            n_feedback_folded_in=0, notes="baseline", is_current=True,
-        ))
+        db.session.add(
+            ModelVersion(
+                version="vtest2",
+                accuracy=0.9,
+                precision=0.9,
+                recall=0.9,
+                f1_score=0.9,
+                false_positive_rate=0.1,
+                false_negative_rate=0.1,
+                n_train=100,
+                n_test=20,
+                n_feedback_folded_in=0,
+                notes="test candidate",
+                is_current=False,
+            )
+        )
+        db.session.add(
+            ModelVersion(
+                version="v1",
+                accuracy=0.96,
+                precision=0.95,
+                recall=0.97,
+                f1_score=0.96,
+                false_positive_rate=0.05,
+                false_negative_rate=0.03,
+                n_train=30000,
+                n_test=7500,
+                n_feedback_folded_in=0,
+                notes="baseline",
+                is_current=True,
+            )
+        )
         db.session.commit()
 
-    infer._state.update(version=None)  # force a fresh load against the patched ARTIFACTS_DIR
+    infer._state.update(
+        version=None
+    )  # force a fresh load against the patched ARTIFACTS_DIR
     yield "vtest2"
-    infer._state.update(version=None)  # don't leak the temp-dir-backed state into later tests
+    infer._state.update(
+        version=None
+    )  # don't leak the temp-dir-backed state into later tests
 
 
 def test_retrain_task_does_not_promote(app, admin_client):
@@ -71,15 +100,25 @@ def test_retrain_task_does_not_promote(app, admin_client):
         before = infer.current_info()["version"]
 
         fake_metrics = {
-            "accuracy": 0.9, "precision": 0.9, "recall": 0.9, "f1_score": 0.9,
-            "false_positive_rate": 0.1, "false_negative_rate": 0.1, "n_train": 100, "n_test": 20,
+            "accuracy": 0.9,
+            "precision": 0.9,
+            "recall": 0.9,
+            "f1_score": 0.9,
+            "false_positive_rate": 0.1,
+            "false_negative_rate": 0.1,
+            "n_train": 100,
+            "n_test": 20,
         }
-        with patch("ml.train.train", return_value=("vfake", fake_metrics, {"n_samples_total": 120})):
+        with patch(
+            "ml.train.train",
+            return_value=("vfake", fake_metrics, {"n_samples_total": 120}),
+        ):
             from tasks import retrain_task
+
             result = retrain_task.run("admin")
 
         assert result["version"] == "vfake"
-        mv = ModelVersion.query.get("vfake")
+        mv = db.session.get(ModelVersion, "vfake")
         assert mv is not None
         assert mv.is_current is False  # trained, not promoted
         assert infer.current_info()["version"] == before  # live model unchanged
@@ -94,9 +133,10 @@ def test_promote_makes_version_live(admin_client, fake_second_version):
     assert infer.current_info()["version"] == fake_second_version
 
     from app import app as flask_app
+
     with flask_app.app_context():
-        assert ModelVersion.query.get(fake_second_version).is_current is True
-        assert ModelVersion.query.get("v1").is_current is False
+        assert db.session.get(ModelVersion, fake_second_version).is_current is True
+        assert db.session.get(ModelVersion, "v1").is_current is False
 
 
 def test_promote_older_version_is_rollback(admin_client, fake_second_version):
@@ -110,9 +150,10 @@ def test_promote_older_version_is_rollback(admin_client, fake_second_version):
     assert infer.current_info()["version"] == "v1"
 
     from app import app as flask_app
+
     with flask_app.app_context():
-        assert ModelVersion.query.get("v1").is_current is True
-        assert ModelVersion.query.get(fake_second_version).is_current is False
+        assert db.session.get(ModelVersion, "v1").is_current is True
+        assert db.session.get(ModelVersion, fake_second_version).is_current is False
 
 
 def test_promote_requires_admin(user_client, fake_second_version):

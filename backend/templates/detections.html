@@ -1,0 +1,40 @@
+{% extends "base_app.html" %}
+{% block title %}Detections — Sentinel AI{% endblock %}
+
+{% block content %}
+<main class="wrap" style="padding:40px 0;max-width:1000px">
+  <a href="/admin.html" style="font-size:.85rem;opacity:.7">← Admin Console</a>
+  <h1 style="margin:.2rem 0">Detections &amp; Incidents</h1>
+
+  <div id="tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin:14px 0">
+    <button class="btn btn-sm ftab" data-tab="all">All</button>
+    <button class="btn btn-sm ftab" data-tab="quarantine">Quarantine</button>
+    <button class="btn btn-sm ftab" data-tab="needs-review">Needs Review</button>
+    <button class="btn btn-sm ftab" data-tab="reported">Reported (.eml)</button>
+  </div>
+
+  <div id="loadError" style="display:none;color:#e88">Admin access required.</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+    <section>
+      <div id="listEmpty" style="display:none;opacity:.6">Nothing here yet.</div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="text-align:left;opacity:.6;font-size:.78rem">
+          <th style="padding:6px 4px">Sender</th><th>Subject</th><th>Verdict</th><th>Source</th>
+        </tr></thead>
+        <tbody id="listBody"></tbody>
+      </table>
+    </section>
+
+    <aside>
+      <div id="detail" class="card" style="padding:16px;position:sticky;top:16px">
+        <div style="opacity:.6">Select a detection to see the incident details.</div>
+      </div>
+    </aside>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/detections.js') }}"></script>
+{% endblock %}

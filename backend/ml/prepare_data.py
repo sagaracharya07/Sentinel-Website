@@ -14,6 +14,7 @@ be reported honestly in the project documentation.
 
 Run: python3 -m ml.prepare_data   (from the backend/ directory)
 """
+
 import pandas as pd
 import os
 
@@ -52,7 +53,9 @@ def main():
     enron = load_and_clean(os.path.join(DATA_DIR, "Enron.csv"))
 
     print("CEAS_08       :", ceas.shape, dict(ceas.label.value_counts()))
-    print("SpamAssassin  :", spamassassin.shape, dict(spamassassin.label.value_counts()))
+    print(
+        "SpamAssassin  :", spamassassin.shape, dict(spamassassin.label.value_counts())
+    )
     print("Nazario       :", nazario.shape, dict(nazario.label.value_counts()))
     print("Nigerian_Fraud:", nigerian.shape, dict(nigerian.label.value_counts()))
     print("Enron         :", enron.shape, dict(enron.label.value_counts()))
@@ -64,8 +67,12 @@ def main():
     # doesn't over-fire on short, low-formality legitimate emails.
     ceas_capped = ceas.sample(n=min(16000, len(ceas)), random_state=42)
     nigerian_capped = nigerian.sample(n=min(3500, len(nigerian)), random_state=42)
-    enron_legit = enron[enron["label"] == 0].sample(n=min(9000, (enron["label"] == 0).sum()), random_state=42)
-    enron_phish = enron[enron["label"] == 1].sample(n=min(2000, (enron["label"] == 1).sum()), random_state=42)
+    enron_legit = enron[enron["label"] == 0].sample(
+        n=min(9000, (enron["label"] == 0).sum()), random_state=42
+    )
+    enron_phish = enron[enron["label"] == 1].sample(
+        n=min(2000, (enron["label"] == 1).sum()), random_state=42
+    )
 
     combined = pd.concat(
         [ceas_capped, spamassassin, nazario, nigerian_capped, enron_legit, enron_phish],

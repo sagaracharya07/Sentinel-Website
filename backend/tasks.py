@@ -7,6 +7,7 @@ threads/request-thread work to a supervised job queue, not a behavior
 rewrite. See celery_app.py for the Beat schedule that enqueues the periodic
 jobs.
 """
+
 from celery.utils.log import get_task_logger
 
 from celery_app import celery_app
@@ -16,6 +17,7 @@ logger = get_task_logger(__name__)
 
 def _app_context():
     from app import app
+
     return app.app_context()
 
 
@@ -23,6 +25,7 @@ def _app_context():
 def purge_old_bodies_task():
     with _app_context():
         from app import purge_old_bodies
+
         purge_old_bodies()
 
 
@@ -31,10 +34,37 @@ def mailbox_sync_task():
     with _app_context():
         from mailbox.sync import sync_mailbox
         from auth import log_action
+
         result = sync_mailbox(log_action=log_action)
         if result.get("error"):
             logger.warning("mailbox_sync_task: %s", result["error"])
         return result
+
+
+@celery_app.task(name="tasks.gmail_sync_task")
+def gmail_sync_task():
+    """Incremental sync of the active Gmail connection. Idempotent and
+    self-locking (see integrations/gmail/sync.py) -- safe to run on a Beat
+    schedule alongside a manual 'Scan now'. Returns a summary dict; never
+    raises (failures are captured onto the connection)."""
+    with _app_context():
+        from integrations.gmail.sync import run_active_sync
+        from auth import log_action
+
+        result = run_active_sync(log_action=log_action)
+        if result.get("error"):
+            logger.warning("gmail_sync_task: %s", result["error"])
+        return result
+
+
+@celery_app.task(name="tasks.gmail_watch_renew_task")
+def gmail_watch_renew_task():
+    """Re-arm the Gmail push watch before its 7-day expiry. No-op when push
+    isn't configured or the active mailbox uses polling."""
+    with _app_context():
+        from integrations.gmail.watch import renew_active_watch
+
+        return renew_active_watch()
 
 
 @celery_app.task(name="tasks.retrain_task", bind=True)
@@ -56,15 +86,17 @@ def retrain_task(self, actor: str):
         pending = Feedback.query.filter_by(used_in_retrain=False).all()
         rows = []
         for fb in pending:
-            scan = Scan.query.get(fb.scan_id)
+            scan = db.session.get(Scan, fb.scan_id)
             if not scan or scan.body_purged or not scan.body:
                 continue
-            rows.append({
-                "sender": scan.sender or "",
-                "subject": scan.subject or "",
-                "body": scan.body or "",
-                "label": 1 if fb.corrected_label == "Phishing" else 0,
-            })
+            rows.append(
+                {
+                    "sender": scan.sender or "",
+                    "subject": scan.subject or "",
+                    "body": scan.body or "",
+                    "label": 1 if fb.corrected_label == "Phishing" else 0,
+                }
+            )
 
         extra_df = pd.DataFrame(rows) if rows else None
         notes = f"Retrained with {len(rows)} confirmed feedback correction(s)"
@@ -77,12 +109,18 @@ def retrain_task(self, actor: str):
         # flag) after reviewing these metrics, same action that also
         # handles rolling back to an older version.
         mv = ModelVersion(
-            version=version, accuracy=metrics["accuracy"], precision=metrics["precision"],
-            recall=metrics["recall"], f1_score=metrics["f1_score"],
+            version=version,
+            accuracy=metrics["accuracy"],
+            precision=metrics["precision"],
+            recall=metrics["recall"],
+            f1_score=metrics["f1_score"],
             false_positive_rate=metrics["false_positive_rate"],
             false_negative_rate=metrics["false_negative_rate"],
-            n_train=metrics["n_train"], n_test=metrics["n_test"],
-            n_feedback_folded_in=len(rows), notes=notes, is_current=False,
+            n_train=metrics["n_train"],
+            n_test=metrics["n_test"],
+            n_feedback_folded_in=len(rows),
+            notes=notes,
+            is_current=False,
         )
         db.session.add(mv)
         for fb in pending:

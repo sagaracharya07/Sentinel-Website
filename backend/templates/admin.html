@@ -2,14 +2,14 @@
 {% block title %}Admin console — Sentinel AI{% endblock %}
 {% block extra_style %}
 <style>
-  .stat-cards{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;margin-top:24px}
-  @media (max-width:1080px){ .stat-cards{grid-template-columns:repeat(3,1fr)} }
+  .stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:24px}
+  @media (max-width:1200px){ .stat-cards{grid-template-columns:repeat(3,1fr)} }
   @media (max-width:620px){ .stat-cards{grid-template-columns:1fr 1fr} }
   .stat-card{background:var(--paper-2);border:1px solid var(--paper-line);border-radius:var(--radius-m);padding:20px;box-shadow:var(--shadow-1)}
   .stat-card b{display:block;font-family:var(--display);font-size:1.7rem}
   .stat-card span{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--paper-muted)}
   .stat-card.threat b{color:var(--threat)}
-  .stat-card.safe b{color:var(--safe)}
+  .stat-card.safe b{color:var(--safe-text)}
   .stat-card.warn b{color:var(--warn)}
 
   .analytics-row{display:grid;grid-template-columns:1.4fr 1fr;gap:24px;margin-top:32px}
@@ -37,6 +37,8 @@
     background:var(--paper-1);color:var(--paper-muted);cursor:pointer;
   }
   .ftab.active{background:var(--scan);color:var(--ink-0);border-color:var(--scan);font-weight:700}
+  #pendingReviewBadge{font-family:var(--mono);font-size:.8rem;color:var(--warn)}
+  #pendingReviewBadge.zero{color:var(--paper-muted)}
 
   /* modal */
   .modal-backdrop{
@@ -90,9 +92,11 @@
     <div class="stat-cards">
       <div class="stat-card hud-frame"><b id="statTotal">0</b><span>Total scans</span></div>
       <div class="stat-card threat hud-frame alert"><b id="statPhishing">0</b><span>Phishing detected</span></div>
+      <div class="stat-card warn hud-frame"><b id="statNeedsReview">0</b><span>Needs review</span></div>
       <div class="stat-card safe hud-frame"><b id="statLegit">0</b><span>Legitimate</span></div>
       <div class="stat-card threat hud-frame alert"><b id="statQuarantined">0</b><span>Quarantined</span></div>
-      <div class="stat-card warn hud-frame"><b id="statAvgConf">0%</b><span>Avg. confidence</span></div>
+      <div class="stat-card warn hud-frame"><b id="statAvgProb">0%</b><span>Avg. phishing probability</span></div>
+      <div class="stat-card warn hud-frame"><b id="statAvgConf">0%</b><span>Avg. prediction confidence</span></div>
     </div>
 
     <div class="analytics-row">
@@ -117,11 +121,14 @@
         <h3>Scan &amp; quarantine log</h3>
         <span style="font-family:var(--mono);font-size:.78rem;color:var(--paper-muted)" id="tableCount"></span>
       </div>
+      <div style="padding:0 24px 10px" id="pendingReviewBadge" role="status"></div>
       <div class="filter-tabs" id="filterTabs">
         <button class="ftab active" data-f="All">All</button>
+        <button class="ftab" data-f="NeedsReview">Needs review</button>
         <button class="ftab" data-f="Quarantined">Quarantined</button>
         <button class="ftab" data-f="Flagged">Flagged</button>
         <button class="ftab" data-f="Delivered">Delivered</button>
+        <button class="ftab" data-f="Released">Released</button>
       </div>
       <div class="filter-tabs" id="sourceTabs" style="border-top:none;padding-top:0">
         <button class="ftab active" data-s="All">All sources</button>
@@ -131,7 +138,7 @@
       <div style="overflow-x:auto">
         <table>
           <thead>
-            <tr><th>Time</th><th>Sender</th><th>Subject</th><th>Verdict</th><th>Risk</th><th>Confidence</th><th>Status</th><th>Source</th><th>Feedback</th></tr>
+            <tr><th>Time</th><th>Sender</th><th>Subject</th><th>Verdict</th><th>Risk</th><th>Pred. confidence</th><th>Status</th><th>Source</th><th>Feedback</th></tr>
           </thead>
           <tbody id="logBody"></tbody>
         </table>
@@ -141,7 +148,13 @@
       <div class="panel-head">
         <h3>Live mailbox connection</h3>
         <span id="mailboxDot" class="mailbox-dot"></span>
+        <a href="/detections.html" class="btn btn-sm" style="margin-left:auto">Detections &amp; Incidents →</a>
+        <a href="/mailboxes.html" class="btn btn-primary btn-sm">Connect Gmail (OAuth) →</a>
       </div>
+      <p style="font-size:.8rem;color:var(--paper-muted);margin:0 0 6px">
+        The panel below is the legacy IMAP integration. The primary integration is now
+        <a href="/mailboxes.html" style="color:var(--scan)">Gmail via Google OAuth</a>.
+      </p>
       <div class="model-card">
         <div id="mailboxConfigured" style="display:none">
           <div style="font-family:var(--mono);font-size:.82rem;color:var(--paper-muted);line-height:2">
@@ -155,7 +168,7 @@
             New last pass: <span id="mbLastNew">—</span> ·
             Total scanned from mailbox: <span id="mbTotal">—</span>
           </div>
-          <div class="err-msg" id="mbError" style="margin-top:12px"></div>
+          <div class="err-msg" id="mbError" role="alert" aria-live="assertive" style="margin-top:12px"></div>
           <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
             <button class="btn btn-ghost btn-sm" id="mbTestBtn">Test connection</button>
             <button class="btn btn-primary btn-sm" id="mbSyncBtn">Sync now</button>
@@ -205,7 +218,7 @@
 
 <!-- detail modal -->
 <div class="modal-backdrop" id="modalBackdrop">
-  <div class="modal hud-frame alert">
+  <div class="modal hud-frame alert" role="dialog" aria-modal="true" aria-labelledby="modalSubject">
     <div class="modal-head">
       <div>
         <div style="font-family:var(--mono);font-size:.72rem;color:var(--paper-muted)" id="modalId"></div>
@@ -229,7 +242,7 @@
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 {% endblock %}
 {% block extra_scripts %}
 <script src="{{ url_for('static_files', filename='js/admin.js') }}"></script>

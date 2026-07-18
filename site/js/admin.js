@@ -1,8 +1,10 @@
 (() => {
   const statTotal = document.getElementById('statTotal');
   const statPhishing = document.getElementById('statPhishing');
+  const statNeedsReview = document.getElementById('statNeedsReview');
   const statLegit = document.getElementById('statLegit');
   const statQuarantined = document.getElementById('statQuarantined');
+  const statAvgProb = document.getElementById('statAvgProb');
   const statAvgConf = document.getElementById('statAvgConf');
   const barChart = document.getElementById('barChart');
   const donut = document.getElementById('donut');
@@ -10,6 +12,7 @@
   const legLegit = document.getElementById('legLegit');
   const logBody = document.getElementById('logBody');
   const tableCount = document.getElementById('tableCount');
+  const pendingReviewBadge = document.getElementById('pendingReviewBadge');
   const filterTabs = document.getElementById('filterTabs');
   const sourceTabs = document.getElementById('sourceTabs');
   const resetDataBtn = document.getElementById('resetDataBtn');
@@ -141,13 +144,21 @@
     const s = await SentinelAPI.stats();
     statTotal.textContent = s.total;
     statPhishing.textContent = s.phishing;
+    statNeedsReview.textContent = s.needs_review ?? 0;
     statLegit.textContent = s.legitimate;
     statQuarantined.textContent = s.quarantined;
-    statAvgConf.textContent = Math.round((s.avg_confidence || 0) * 100) + '%';
+    statAvgProb.textContent = Math.round((s.avg_phishing_probability || 0) * 100) + '%';
+    statAvgConf.textContent = Math.round((s.avg_prediction_confidence || 0) * 100) + '%';
 
     donut.style.setProperty('--pct', s.total ? (s.phishing / s.total * 100) + '%' : '0%');
     legPhish.textContent = s.phishing;
     legLegit.textContent = s.legitimate;
+
+    const pending = s.pending_review ?? 0;
+    pendingReviewBadge.textContent = pending
+      ? `${pending} item(s) awaiting review (quarantined or flagged, not yet released/confirmed)`
+      : 'Nothing awaiting review right now.';
+    pendingReviewBadge.classList.toggle('zero', pending === 0);
   }
 
   function renderBarChart(records) {
@@ -178,27 +189,52 @@
     }).join('');
   }
 
+  // "Needs review" and "Released" are not literal Scan.status values (see
+  // app.py's /api/history classification=/released= params, which use the
+  // same semantics server-side) -- Needs Review is a classification, and
+  // Released has no status of its own (a release just returns the scan to
+  // status=Delivered), so it's identified by the notes text admin_action's
+  // "release" branch sets, the one signal unique to that specific action.
+  function matchesStatusFilter(r) {
+    if (activeFilter === 'All') return true;
+    if (activeFilter === 'NeedsReview') return r.classification === 'Needs Review';
+    if (activeFilter === 'Released') return (r.notes || '').startsWith('Released by admin');
+    return r.status === activeFilter;
+  }
+
   function renderTable() {
-    let records = cachedRecords;
-    if (activeFilter !== 'All') records = records.filter(r => r.status === activeFilter);
+    let records = cachedRecords.filter(matchesStatusFilter);
     if (activeSource !== 'All') records = records.filter(r => r.source === activeSource);
     tableCount.textContent = `${records.length} record(s)`;
-    logBody.innerHTML = records.map(r => `
-      <tr data-id="${r.scan_id}">
+    logBody.innerHTML = records.map(r => {
+      const copy = Sentinel.verdictCopy(r.classification);
+      const conf = r.prediction_confidence ?? Math.max(r.confidence_score || 0, 1 - (r.confidence_score || 0));
+      return `
+      <tr data-id="${r.scan_id}" tabindex="0" role="button" aria-label="View details for scan ${r.scan_id}">
         <td style="font-family:var(--mono);font-size:.78rem;color:var(--paper-muted)">${fmtTime(r.scan_timestamp)}</td>
         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${Sentinel.escapeHtml(r.from || '')}</td>
         <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${Sentinel.escapeHtml(r.subject || '')}</td>
-        <td><span class="chip ${r.classification === 'Phishing' ? 'chip-threat' : 'chip-safe'}">${r.classification}</span></td>
+        <td><span class="chip ${copy.chip}">${r.classification}</span></td>
         <td>${r.risk_level}</td>
-        <td style="font-family:var(--mono)">${Math.round((r.confidence_score || 0) * 100)}%</td>
+        <td style="font-family:var(--mono)">${Math.round(conf * 100)}%</td>
         <td><span class="status-pill status-${r.status}">${r.status}</span></td>
         <td><span class="source-chip ${r.source === 'mailbox' ? 'source-mailbox' : 'source-manual'}">${r.source === 'mailbox' ? 'Live mailbox' : 'Manual'}</span></td>
         <td style="font-family:var(--mono);font-size:.78rem;color:var(--paper-muted)">${r.user_feedback ? '✓ ' + r.user_feedback : '—'}</td>
       </tr>
-    `).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--paper-muted);padding:32px">No records in this view.</td></tr>`;
+    `;
+    }).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--paper-muted);padding:32px">No records in this view.</td></tr>`;
 
     logBody.querySelectorAll('tr[data-id]').forEach(row => {
-      row.addEventListener('click', () => openModal(row.getAttribute('data-id')));
+      row.addEventListener('click', () => openModal(row.getAttribute('data-id'), row));
+      // Rows are plain <tr> elements (not <button>/<a>), so without this
+      // they're mouse-only -- tabindex+role above makes them reachable,
+      // this makes Enter/Space actually activate them like a real button.
+      row.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openModal(row.getAttribute('data-id'), row);
+        }
+      });
     });
   }
 
@@ -317,13 +353,21 @@
     }
   });
 
-  async function openModal(scanId) {
+  let modalTriggerEl = null;
+
+  async function openModal(scanId, triggerEl) {
+    modalTriggerEl = triggerEl || document.activeElement;
     const record = await SentinelAPI.getScan(scanId);
     modalId.textContent = record.scan_id;
     modalSubject.textContent = record.subject;
     modalFrom.textContent = record.from;
     modalTime.textContent = fmtTime(record.scan_timestamp);
-    modalVerdict.innerHTML = `<span class="chip ${record.classification === 'Phishing' ? 'chip-threat' : 'chip-safe'}">${record.classification}</span> &nbsp; ${Math.round((record.confidence_score || 0) * 100)}% confidence · ${record.risk_level} risk`;
+    {
+      const copy = Sentinel.verdictCopy(record.classification);
+      const phishPct = Math.round((record.phishing_probability ?? record.confidence_score ?? 0) * 100);
+      const confPct = Math.round((record.prediction_confidence ?? Math.max(record.confidence_score || 0, 1 - (record.confidence_score || 0))) * 100);
+      modalVerdict.innerHTML = `<span class="chip ${copy.chip}">${record.classification}</span> &nbsp; ${phishPct}% phishing probability · ${confPct}% prediction confidence · ${record.risk_level} risk · model ${record.model_version || '—'}`;
+    }
     modalStatus.innerHTML = `<span class="status-pill status-${record.status}">${record.status}</span>
       <span class="source-chip ${record.source === 'mailbox' ? 'source-mailbox' : 'source-manual'}" style="margin-left:8px">${record.source === 'mailbox' ? 'Live mailbox' : 'Manual'}</span>
       ${record.source === 'mailbox' ? `<div style="margin-top:6px;font-family:var(--mono);font-size:.76rem;color:var(--paper-muted)">
@@ -335,8 +379,8 @@
       : Sentinel.highlight(record.body || '', record.highlights).replace(/\n/g, '<br>');
 
     modalFindings.innerHTML = (record.findings || []).length
-      ? record.findings.map(f => `<div class="finding-item"><span class="finding-sev ${f.severity}"></span><div><div class="finding-title">${f.type}</div><div class="finding-detail">${Sentinel.escapeHtml(f.detail)}</div></div></div>`).join('')
-      : '<div class="finding-item"><span class="finding-sev low"></span><div class="finding-title">No risk signals recorded</div></div>';
+      ? record.findings.map(f => `<div class="finding-item"><span class="finding-sev ${f.severity}"></span><div><div class="finding-title">${f.type} <span style="color:var(--paper-muted);font-weight:400">(${Sentinel.findingCategory(f.type)})</span></div><div class="finding-detail">${Sentinel.escapeHtml(f.detail)}</div></div></div>`).join('')
+      : '<div class="finding-item"><span class="finding-sev low"></span><div class="finding-title">No explicit rule-based phishing indicators were detected. The decision was influenced mainly by the machine-learning text model.</div></div>';
 
     modalActions.innerHTML = '';
     if (record.status === 'Quarantined' || record.status === 'Flagged') {
@@ -348,6 +392,10 @@
     }
 
     modalBackdrop.classList.add('show');
+    // Move focus into the dialog (the close button is always present and
+    // stable, unlike modalActions' buttons which vary by scan status) --
+    // without this, focus stays on the row behind the now-open modal.
+    modalClose.focus();
   }
 
   function addAction(label, cls, handler) {
@@ -371,8 +419,38 @@
 
   function closeModal() {
     modalBackdrop.classList.remove('show');
+    // Return focus to whatever opened the modal (a table row or the
+    // "View" action) instead of leaving it stranded on a now-hidden
+    // close button.
+    if (modalTriggerEl && document.body.contains(modalTriggerEl)) {
+      modalTriggerEl.focus();
+    }
+    modalTriggerEl = null;
   }
   modalClose.addEventListener('click', closeModal);
   modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (!modalBackdrop.classList.contains('show')) return;
+    if (e.key === 'Escape') {
+      closeModal();
+      return;
+    }
+    // Minimal focus trap: keep Tab cycling within the dialog while it's
+    // open instead of leaking focus out to the table/page behind it.
+    if (e.key === 'Tab') {
+      const focusable = modalBackdrop.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  });
 })();

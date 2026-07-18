@@ -17,6 +17,9 @@ env/
 backend/instance/*.db
 backend/instance/*.sqlite3
 
+# Uploaded .eml reports (never commit private email content)
+backend/instance/uploads/
+
 
 # Editors / OS cruft
 .vscode/

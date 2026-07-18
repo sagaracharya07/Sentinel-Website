@@ -30,8 +30,12 @@ target_metadata = db.metadata
 # instead of the static placeholder alembic.ini ships with.
 _backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _instance_dir = os.path.join(_backend_dir, "instance")
-_is_production = os.environ.get("SENTINEL_ENV", "development").strip().lower() == "production"
-config.set_main_option("sqlalchemy.url", resolve_database_uri(_instance_dir, _is_production))
+_is_production = (
+    os.environ.get("SENTINEL_ENV", "development").strip().lower() == "production"
+)
+config.set_main_option(
+    "sqlalchemy.url", resolve_database_uri(_instance_dir, _is_production)
+)
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -77,9 +81,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

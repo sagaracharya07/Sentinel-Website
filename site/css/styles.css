@@ -28,6 +28,12 @@
   --safe:#4C6FFF;
   --safe-bg:rgba(76,111,255,.13);
   --safe-line:rgba(76,111,255,.4);
+  /* Lighter than --safe specifically for text on dark backgrounds --
+     #4C6FFF as literal text color measures ~4.0:1 against --paper-2,
+     just under the WCAG AA 4.5:1 minimum for normal text. --safe itself
+     is kept unchanged for backgrounds/dots/borders, where that ratio
+     doesn't apply the same way. */
+  --safe-text:#8FA5FF;
   --threat:#FF4433;
   --threat-bg:rgba(255,68,51,.14);
   --threat-line:rgba(255,68,51,.42);
@@ -213,12 +219,13 @@ p{margin:0}
 .btn-sm{padding:8px 16px;font-size:.8rem;border-radius:6px}
 
 /* ---------- badges / chips ---------- */
+.scan-limitation-note{font-size:.8rem;color:var(--paper-muted);background:var(--paper-1);border:1px dashed var(--paper-line);border-radius:var(--radius-s);padding:10px 14px}
 .chip{
   font-family:var(--mono);font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
   padding:5px 11px;border-radius:5px;display:inline-flex;align-items:center;gap:6px;
 }
 .chip::before{content:"";width:6px;height:6px;border-radius:50%}
-.chip-safe{background:var(--safe-bg);color:var(--safe);border:1px solid var(--safe-line)}
+.chip-safe{background:var(--safe-bg);color:var(--safe-text);border:1px solid var(--safe-line)}
 .chip-safe::before{background:var(--safe);box-shadow:0 0 8px var(--safe)}
 .chip-threat{background:var(--threat-bg);color:var(--threat);border:1px solid var(--threat-line)}
 .chip-threat::before{background:var(--threat);box-shadow:0 0 8px var(--threat)}
@@ -285,7 +292,7 @@ footer .foot-bottom{border-top:1px solid var(--ink-line);margin-top:40px;padding
 .compare-wrap{overflow-x:auto;border:1px solid var(--paper-line);border-radius:var(--radius-m);background:var(--paper-2)}
 .compare{min-width:680px}
 .compare th:first-child, .compare td:first-child{position:sticky;left:0;background:var(--paper-2)}
-.compare td.yes{color:var(--safe);font-weight:700}
+.compare td.yes{color:var(--safe-text);font-weight:700}
 .compare td.no{color:var(--paper-muted)}
 .compare th.us{color:var(--scan-2)}
 
@@ -328,14 +335,14 @@ footer .foot-bottom{border-top:1px solid var(--ink-line);margin-top:40px;padding
 .changelog-entry:first-child{padding-top:0}
 .changelog-date{font-family:var(--mono);font-size:.76rem;color:var(--paper-muted);min-width:110px;flex:none;padding-top:3px}
 .changelog-tag{display:inline-block;font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;font-weight:700;padding:2px 9px;border-radius:999px;margin-bottom:8px}
-.changelog-tag.feature{background:var(--safe-bg);color:var(--safe)}
+.changelog-tag.feature{background:var(--safe-bg);color:var(--safe-text)}
 .changelog-tag.security{background:var(--threat-bg);color:var(--threat)}
 .changelog-tag.infra{background:var(--warn-bg);color:var(--warn)}
 .changelog-tag.model{background:rgba(139,124,255,.14);color:var(--scan-2)}
 
 .status-row{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--paper-line)}
 .status-row:last-child{border-bottom:none}
-.status-ok{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.78rem;color:var(--safe);font-weight:600}
+.status-ok{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.78rem;color:var(--safe-text);font-weight:600}
 .status-dot{width:8px;height:8px;border-radius:50%;background:var(--safe);box-shadow:0 0 8px var(--safe)}
 
 /* ---------- app shell (scan / admin) ---------- */
@@ -402,5 +409,5 @@ tbody tr:last-child td{border-bottom:none}
   font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;
   padding:3px 9px;border-radius:999px;font-weight:600;
 }
-.source-mailbox{background:var(--safe-bg);color:var(--safe)}
+.source-mailbox{background:var(--safe-bg);color:var(--safe-text)}
 .source-manual{background:rgba(255,255,255,.06);color:var(--paper-muted)}
