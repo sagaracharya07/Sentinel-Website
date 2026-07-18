@@ -18,6 +18,7 @@ import os
 import secrets
 import logging
 from datetime import timezone
+from urllib.parse import quote
 
 from flask import Blueprint, request, jsonify, session, redirect
 
@@ -112,11 +113,13 @@ def callback():
     never leaks tokens or renders raw errors."""
     expected_state = session.pop(_STATE_SESSION_KEY, None)
 
-    # User cancelled or Google returned an error.
+    # User cancelled or Google returned an error. URL-encode the reflected
+    # value (defence-in-depth: Google's error codes are safe, but never place
+    # an unencoded external value into a redirect target).
     error = request.args.get("error")
     if error:
-        log_action(current_actor(), "gmail_connect_denied", details=error)
-        return redirect(f"{_RESULT_PAGE}?error={error}")
+        log_action(current_actor(), "gmail_connect_denied", details=error[:100])
+        return redirect(f"{_RESULT_PAGE}?error={quote(error, safe='')}")
 
     state = request.args.get("state")
     code = request.args.get("code")

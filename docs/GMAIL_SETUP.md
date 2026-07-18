@@ -131,9 +131,19 @@ have a **public HTTPS** callback.
    `projects/<proj>/topics/sentinel-gmail`).
 2. **Grant Gmail publish rights**: on the topic, add principal
    `gmail-api-push@system.gserviceaccount.com` with role **Pub/Sub Publisher**.
-3. **Create a push subscription** whose endpoint is your public webhook:
-   `https://<your-app>/api/gmail/pubsub?token=<GOOGLE_PUBSUB_VERIFICATION_TOKEN>`
-4. Set env: `GOOGLE_PUBSUB_TOPIC`, `GOOGLE_PUBSUB_VERIFICATION_TOKEN`.
+3. **Create a push subscription** whose endpoint is your public webhook. Two
+   authentication options:
+   - **Recommended (OIDC):** enable **authentication** on the subscription
+     with a service account; set the audience to your endpoint URL. Sentinel
+     verifies Google's signed token when `GOOGLE_PUBSUB_AUDIENCE` is set
+     (optionally pin the caller with `GOOGLE_PUBSUB_SERVICE_ACCOUNT`).
+     Endpoint: `https://<your-app>/api/gmail/pubsub`
+   - **Simple (shared token):** endpoint
+     `https://<your-app>/api/gmail/pubsub?token=<GOOGLE_PUBSUB_VERIFICATION_TOKEN>`.
+     Weaker — the token appears in the URL/logs.
+4. Set env: `GOOGLE_PUBSUB_TOPIC` plus either `GOOGLE_PUBSUB_AUDIENCE`
+   (+ optional `GOOGLE_PUBSUB_SERVICE_ACCOUNT`) **or**
+   `GOOGLE_PUBSUB_VERIFICATION_TOKEN`.
 5. In Sentinel, enable push (POST `/api/admin/gmail/watch/start`). The
    `gmail-watch-renew` Beat task re-arms the 7-day watch daily.
 If push is unavailable, Sentinel keeps polling — nothing breaks.

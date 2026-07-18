@@ -6,7 +6,9 @@
   function esc(s) {
     const d = document.createElement('div');
     d.textContent = s == null ? '' : String(s);
-    return d.innerHTML;
+    // innerHTML escapes <>& ; also escape quotes so values are safe in
+    // attribute contexts (defence-in-depth).
+    return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
   function fmt(ts) { try { return ts ? new Date(ts).toLocaleString() : '—'; } catch (e) { return ts; } }
 

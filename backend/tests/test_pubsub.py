@@ -1,6 +1,7 @@
 """Pub/Sub push webhook + admin watch routes."""
 
 import tasks
+from routes import pubsub as pubsub_mod
 
 
 def _enqueue_spy(monkeypatch):
@@ -58,6 +59,55 @@ def test_pubsub_is_csrf_exempt(client, monkeypatch):
         assert resp.status_code == 204  # not 400 (CSRF) -- exemption works
     finally:
         client.application.config["WTF_CSRF_ENABLED"] = False
+
+
+# --- OIDC (production) auth mode --------------------------------------------
+def test_pubsub_oidc_valid_token_enqueues(client, monkeypatch):
+    monkeypatch.setenv("GOOGLE_PUBSUB_AUDIENCE", "https://app/api/gmail/pubsub")
+    monkeypatch.delenv("GOOGLE_PUBSUB_VERIFICATION_TOKEN", raising=False)
+    monkeypatch.setattr(
+        pubsub_mod,
+        "_verify_oidc",
+        lambda t, a: {"email": "sa@proj.iam.gserviceaccount.com"},
+    )
+    calls = _enqueue_spy(monkeypatch)
+    resp = client.post(
+        "/api/gmail/pubsub", headers={"Authorization": "Bearer good.jwt.token"}, json={}
+    )
+    assert resp.status_code == 204
+    assert calls["n"] == 1
+
+
+def test_pubsub_oidc_missing_bearer_rejected(client, monkeypatch):
+    monkeypatch.setenv("GOOGLE_PUBSUB_AUDIENCE", "https://app/api/gmail/pubsub")
+    assert client.post("/api/gmail/pubsub", json={}).status_code == 403
+
+
+def test_pubsub_oidc_invalid_token_rejected(client, monkeypatch):
+    monkeypatch.setenv("GOOGLE_PUBSUB_AUDIENCE", "https://app/api/gmail/pubsub")
+
+    def boom(t, a):
+        raise ValueError("bad signature")
+
+    monkeypatch.setattr(pubsub_mod, "_verify_oidc", boom)
+    resp = client.post(
+        "/api/gmail/pubsub", headers={"Authorization": "Bearer bad"}, json={}
+    )
+    assert resp.status_code == 403
+
+
+def test_pubsub_oidc_wrong_service_account_rejected(client, monkeypatch):
+    monkeypatch.setenv("GOOGLE_PUBSUB_AUDIENCE", "https://app/api/gmail/pubsub")
+    monkeypatch.setenv(
+        "GOOGLE_PUBSUB_SERVICE_ACCOUNT", "expected@proj.iam.gserviceaccount.com"
+    )
+    monkeypatch.setattr(
+        pubsub_mod, "_verify_oidc", lambda t, a: {"email": "attacker@evil.com"}
+    )
+    resp = client.post(
+        "/api/gmail/pubsub", headers={"Authorization": "Bearer x"}, json={}
+    )
+    assert resp.status_code == 403
 
 
 # --- admin watch routes ------------------------------------------------------
