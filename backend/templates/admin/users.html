@@ -1,0 +1,29 @@
+{% extends "base_admin.html" %}
+{% block title %}Users &amp; Roles — Sentinel AI Console{% endblock %}
+{% block page_title %}Users &amp; Roles{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Users &amp; Roles</h1>
+  <p>Change a user's role or suspend an account. The last remaining administrator can never be demoted or suspended.</p>
+</div>
+
+<div class="toolbar">
+  <label class="search">
+    <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+    <input type="search" id="qSearch" placeholder="Search username…" aria-label="Search users">
+  </label>
+  <select id="fRole" class="input" style="max-width:160px" aria-label="Role filter">
+    <option value="">All roles</option>
+    <option value="admin">Security Administrator</option>
+    <option value="user">User / Employee</option>
+  </select>
+  <span class="muted mono" id="resultCount" style="margin-left:auto;font-size:.8rem"></span>
+</div>
+
+<section class="panel">
+  <div id="listBody"><div class="state"><span class="spinner" aria-hidden="true"></span></div></div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/users.js') }}"></script>
+{% endblock %}

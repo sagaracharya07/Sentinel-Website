@@ -1,0 +1,30 @@
+{% extends "base_admin.html" %}
+{% block title %}Settings — Reporting — Sentinel AI Console{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Settings</h1></div>
+<div class="settings-layout">
+  {% include "partials/_settings_nav.html" %}
+  <section class="panel">
+    <div class="panel-head"><h3>Reporting</h3></div>
+    <div class="panel-body">
+      <div class="setting-row">
+        <div><div class="s-label">Maximum .eml size</div><div class="s-desc">EML_MAX_BYTES</div></div>
+        <div class="row"><span class="mono">5 MB</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="s-label">Accepted file types</div></div>
+        <div class="row"><span class="mono">.eml only</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="s-label">Automatic analysis</div><div class="s-desc">Every upload is analysed immediately</div></div>
+        <div class="row"><span class="mono">Enabled</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="s-label">Administrator review required</div><div class="s-desc">A report's final verdict always comes from an administrator</div></div>
+        <div class="row"><span class="mono">Enabled</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

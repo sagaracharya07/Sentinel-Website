@@ -1,0 +1,40 @@
+{% extends "base_admin.html" %}
+{% block title %}Settings — General — Sentinel AI Console{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Settings</h1>
+  <p>Only controls that perform a real backend action are editable here — everything else is labelled by where it's actually configured.</p>
+</div>
+<div class="settings-layout">
+  {% include "partials/_settings_nav.html" %}
+  <section class="panel">
+    <div class="panel-head"><h3>General</h3></div>
+    <div class="panel-body">
+      <div class="setting-row">
+        <div><div class="s-label">Application name</div><div class="s-desc">Displayed throughout the interface</div></div>
+        <div class="row"><span class="mono">Sentinel AI</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="s-label">Organisation</div><div class="s-desc">This deployment supports one organisation</div></div>
+        <div class="row"><span class="mono">Single-tenant prototype</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="s-label">Environment</div><div class="s-desc">SENTINEL_ENV</div></div>
+        <div class="row"><span class="mono" id="envValue">—</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="s-label">Records per page</div><div class="s-desc">Default table page size across the console</div></div>
+        <div class="row"><span class="mono">100</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+      <div class="callout" style="margin-top:var(--sp-4)">
+        <svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg>
+        <div>Organisation-level customisation (name, logo, approved domains) is not yet implemented — this is a single-organisation prototype.</div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/settings_general.js') }}"></script>
+{% endblock %}

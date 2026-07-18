@@ -1,0 +1,16 @@
+{% extends "base_admin.html" %}
+{% block title %}Failed Processing — Sentinel AI Console{% endblock %}
+{% block page_title %}Failed Processing{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Failed Processing</h1>
+  <p>Messages Sentinel could not fully process (Gmail retrieval, parsing, or label failures). Sentinel automatically retries these on the next sync — no manual retry is available yet.</p>
+</div>
+
+<section class="panel">
+  <div id="listBody"><div class="state"><span class="spinner" aria-hidden="true"></span></div></div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/failed.js') }}"></script>
+{% endblock %}

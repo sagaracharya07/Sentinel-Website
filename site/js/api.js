@@ -144,6 +144,27 @@ const SentinelAPI = (() => {
   const demoScan = () => request('/api/public/demo-scan');
   const submitContact = (payload) => request('/api/contact', { method: 'POST', body: JSON.stringify(payload) });
 
+  // ---- users & roles (admin-only) ----
+  const usersList = (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request('/api/admin/users' + (qs ? '?' + qs : ''));
+  };
+  const userChangeRole = (id, role) =>
+    request('/api/admin/users/' + encodeURIComponent(id) + '/role', { method: 'POST', body: JSON.stringify({ role }) });
+  const userSuspend = (id) => request('/api/admin/users/' + encodeURIComponent(id) + '/suspend', { method: 'POST' });
+  const userActivate = (id) => request('/api/admin/users/' + encodeURIComponent(id) + '/activate', { method: 'POST' });
+
+  // ---- system health (admin-only) ----
+  const systemHealth = () => request('/api/admin/system-health');
+
+  // ---- settings: detection policy (admin-only) ----
+  const detectionPolicy = () => request('/api/admin/settings/detection-policy');
+  const updateDetectionPolicy = (needsReviewThreshold, phishingThreshold) =>
+    request('/api/admin/settings/detection-policy', {
+      method: 'POST',
+      body: JSON.stringify({ needs_review_threshold: needsReviewThreshold, phishing_threshold: phishingThreshold }),
+    });
+
   return {
     login, logout, me, register, forgotPassword, resetPassword, changePassword,
     scan, all, getScan, stats,
@@ -154,5 +175,7 @@ const SentinelAPI = (() => {
     reportUpload, reportsMine, reportDetail,
     detectionList, quarantineList, needsReviewList, incidentDetail, relatedMessages,
     adminReports, reviewReport,
+    usersList, userChangeRole, userSuspend, userActivate,
+    systemHealth, detectionPolicy, updateDetectionPolicy,
   };
 })();

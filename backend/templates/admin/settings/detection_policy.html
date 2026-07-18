@@ -1,0 +1,45 @@
+{% extends "base_admin.html" %}
+{% block title %}Settings — Detection Policy — Sentinel AI Console{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Settings</h1>
+</div>
+<div class="settings-layout">
+  {% include "partials/_settings_nav.html" %}
+  <section class="panel">
+    <div class="panel-head">
+      <h3>Detection Policy</h3>
+      <span class="setting-tag configurable" style="margin-left:auto">Configurable Here</span>
+    </div>
+    <div class="panel-body">
+      <p class="muted" style="font-size:.88rem;margin-bottom:var(--sp-5)">
+        These thresholds decide where a phishing probability crosses into Needs Review or Phishing. Changing them does not retrain the model — it only changes where the existing probability line is drawn.
+      </p>
+
+      <div id="policyLoading" class="state"><span class="spinner" aria-hidden="true"></span></div>
+
+      <form id="policyForm" hidden>
+        <div class="field">
+          <label class="field-label" for="needsReviewInput">Needs Review threshold</label>
+          <input type="number" id="needsReviewInput" step="0.01" min="0.01" max="0.98">
+          <div class="field-hint">Phishing probability at or above this value is held for review.</div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="phishingInput">Phishing threshold</label>
+          <input type="number" id="phishingInput" step="0.01" min="0.02" max="0.99">
+          <div class="field-hint">Phishing probability at or above this value is classified Phishing and quarantined.</div>
+        </div>
+        <div class="field-error" id="policyError"></div>
+        <div class="row-wrap">
+          <button type="submit" class="btn btn-primary" id="policySaveBtn">Save changes</button>
+          <span class="muted mono" id="policyMeta" style="font-size:.78rem"></span>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/settings_detection_policy.js') }}"></script>
+{% endblock %}

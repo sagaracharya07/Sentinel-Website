@@ -143,12 +143,18 @@ from routes.reports import reports_bp  # noqa: E402
 from routes.detections import detections_bp  # noqa: E402
 from routes.pubsub import pubsub_bp  # noqa: E402
 from routes.pages import pages_bp  # noqa: E402
+from routes.users import users_bp  # noqa: E402
+from routes.system import system_bp  # noqa: E402
+from routes.settings import settings_bp  # noqa: E402
 
 app.register_blueprint(gmail_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(detections_bp)
 app.register_blueprint(pubsub_bp)
 app.register_blueprint(pages_bp)
+app.register_blueprint(users_bp)
+app.register_blueprint(system_bp)
+app.register_blueprint(settings_bp)
 # The Pub/Sub webhook is called by Google, not a browser -- it authenticates
 # via a shared verification token, not a session/CSRF token, so it must be
 # exempt from CSRF (it would otherwise 400 on every push).
@@ -486,8 +492,18 @@ def login():
                 "error": "Please verify your email before logging in. Check your inbox for the verification link."
             }
         ), 403
+    # Suspended accounts (Users & Roles console) must not be able to
+    # authenticate at all -- checked after credentials so this never leaks
+    # account existence to an attacker with the wrong password.
+    if not user.is_active:
+        log_action(username, "login_blocked_suspended")
+        return jsonify(
+            {"error": "This account has been suspended. Contact an administrator."}
+        ), 403
     session["username"] = user.username
     session["role"] = user.role
+    user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.session.commit()
     log_action(user.username, "login_success")
     return jsonify(user.to_public())
 

@@ -1,0 +1,36 @@
+{% extends "base_admin.html" %}
+{% block title %}Settings — Appearance — Sentinel AI Console{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Settings</h1></div>
+<div class="settings-layout">
+  {% include "partials/_settings_nav.html" %}
+  <section class="panel">
+    <div class="panel-head"><h3>Appearance</h3></div>
+    <div class="panel-body">
+      <div class="field">
+        <label class="field-label" for="apMotion">Motion</label>
+        <select id="apMotion" class="input" style="max-width:280px">
+          <option value="normal">Show animations</option>
+          <option value="reduced">Reduce motion</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="apDensity">Table density</label>
+        <select id="apDensity" class="input" style="max-width:280px">
+          <option value="comfortable">Comfortable</option>
+          <option value="compact">Compact</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="apSaveBtn">Save</button>
+      <div class="callout" id="apSaved" style="display:none;margin-top:var(--sp-3)">
+        <svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><div>Saved to this browser.</div>
+      </div>
+      <p class="muted" style="font-size:.8rem;margin-top:var(--sp-4)">Stored per-browser (not yet synced to your account) — <span class="setting-tag configurable">Configurable Here</span></p>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/settings_appearance.js') }}"></script>
+{% endblock %}

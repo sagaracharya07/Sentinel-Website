@@ -1,0 +1,23 @@
+{% extends "base_admin.html" %}
+{% block title %}Settings — Gmail Protection — Sentinel AI Console{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Settings</h1>
+</div>
+<div class="settings-layout">
+  {% include "partials/_settings_nav.html" %}
+  <section class="panel">
+    <div class="panel-head">
+      <h3>Gmail Protection</h3>
+      <a href="/admin/mailboxes" class="btn btn-sm btn-primary" style="margin-left:auto">Manage in Connected Mailboxes →</a>
+    </div>
+    <div class="panel-body" id="gmailSettingsBody">
+      <div class="state"><span class="spinner" aria-hidden="true"></span></div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/settings_gmail.js') }}"></script>
+{% endblock %}

@@ -131,6 +131,17 @@
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-5); align-items: start; }
 @media (max-width: 820px) { .grid-2 { grid-template-columns: 1fr; } }
 
+/* settings sub-nav layout */
+.settings-layout { display: grid; grid-template-columns: 200px 1fr; gap: var(--sp-6); align-items: start; }
+@media (max-width: 820px) { .settings-layout { grid-template-columns: 1fr; } }
+.setting-row { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-4); align-items: center; padding: var(--sp-4) 0; border-bottom: 1px solid var(--border); }
+.setting-row:last-child { border-bottom: none; }
+.setting-row .s-label { font-weight: 600; font-size: var(--fs-sm); }
+.setting-row .s-desc { color: var(--text-muted); font-size: var(--fs-xs); margin-top: 3px; }
+.setting-tag { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; padding: 3px 8px; border-radius: var(--radius-pill); border: 1px solid var(--border); color: var(--text-muted); white-space: nowrap; }
+.setting-tag.configurable { color: var(--cyan); border-color: rgba(76,201,255,.35); background: var(--cyan-wash); }
+.setting-tag.deployment { color: var(--violet); border-color: rgba(124,92,255,.35); background: var(--violet-wash); }
+
 /* toolbar (filters + search row above a table) */
 .toolbar { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center; margin-bottom: var(--sp-4); }
 .toolbar .search { position: relative; flex: 1 1 220px; max-width: 340px; }

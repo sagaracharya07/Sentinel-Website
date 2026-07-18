@@ -1,0 +1,35 @@
+{% extends "base_admin.html" %}
+{% block title %}Model Management — Sentinel AI Console{% endblock %}
+{% block page_title %}Model Management{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Model Management</h1>
+  <p>The trained classifier that powers phishing detection. Retraining produces a reviewable candidate; only promoting a version makes it live — the same action serves as rollback.</p>
+</div>
+
+<section class="panel" style="margin-bottom:var(--sp-5)">
+  <div class="panel-head">
+    <h3>Active model</h3>
+    <span class="muted mono" id="pendingFeedbackTag" style="margin-left:auto;font-size:.78rem"></span>
+  </div>
+  <div class="panel-body" id="activeModel"><div class="state"><span class="spinner" aria-hidden="true"></span></div></div>
+</section>
+
+<section class="panel" style="margin-bottom:var(--sp-5)">
+  <div class="panel-head">
+    <h3>Retrain</h3>
+    <button class="btn btn-primary btn-sm" id="retrainBtn" style="margin-left:auto">Retrain with new feedback</button>
+  </div>
+  <div class="panel-body">
+    <div id="retrainStatus" class="muted" style="font-size:.85rem">Retraining runs as a background job — this page will show progress once started.</div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h3>Version history</h3></div>
+  <div id="versionList"><div class="state"><span class="spinner" aria-hidden="true"></span></div></div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/model.js') }}"></script>
+{% endblock %}

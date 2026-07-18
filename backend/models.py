@@ -26,6 +26,12 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default="user")  # 'user' | 'admin'
     created_at = db.Column(db.DateTime, default=utcnow)
+    last_login_at = db.Column(db.DateTime, nullable=True)
+
+    # Administrator account suspension (Users & Roles console, Phase 16).
+    # Suspended users fail login (see auth.py's verify_login) but keep their
+    # row and history -- suspension is reversible, not a deletion.
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
 
     # Self-serve registration (nullable so the seeded admin/user demo
     # accounts, which have no email, are unaffected by the verification
@@ -43,6 +49,25 @@ class User(db.Model):
             "role": self.role,
             "email": self.email,
             "email_verified": self.email_verified,
+            "is_active": self.is_active,
+        }
+
+    def to_admin_dict(self):
+        """Admin-facing user list row (Users & Roles). Never includes
+        password_hash or any token."""
+        report_count = Scan.query.filter_by(created_by=self.username).count()
+        return {
+            "id": self.id,
+            "username": self.username,
+            "role": self.role,
+            "email": self.email,
+            "email_verified": self.email_verified,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "last_login_at": self.last_login_at.isoformat()
+            if self.last_login_at
+            else None,
+            "report_count": report_count,
         }
 
 
@@ -534,4 +559,59 @@ class AuditLog(db.Model):
             "target": self.target,
             "details": self.details,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+        }
+
+
+# Detection-policy thresholds shipped as code constants in ml/infer.py's
+# decide() until Phase 16 -- not configurable without a redeploy. This is the
+# one genuinely-required Settings write path from the frontend-revamp
+# direction (Checkpoint 0's approved small-backend-additions list): admins
+# need to see and adjust the Needs-Review / Phishing cut points without
+# retraining or redeploying the model.
+DEFAULT_NEEDS_REVIEW_THRESHOLD = 0.50
+DEFAULT_PHISHING_THRESHOLD = 0.75
+
+
+class AppSettings(db.Model):
+    """
+    Singleton row (id=1) for admin-configurable, non-secret application
+    settings. Deliberately narrow in scope: only Detection Policy thresholds
+    are writable in this revision. Every other "Settings" page in the
+    revamped console reads real configuration (env vars, feature flags) and
+    labels it Deployment Managed / Read Only rather than writing here --
+    see docs/SETTINGS.md.
+    """
+
+    __tablename__ = "app_settings"
+    id = db.Column(db.Integer, primary_key=True)
+    needs_review_threshold = db.Column(
+        db.Float, nullable=False, default=DEFAULT_NEEDS_REVIEW_THRESHOLD
+    )
+    phishing_threshold = db.Column(
+        db.Float, nullable=False, default=DEFAULT_PHISHING_THRESHOLD
+    )
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
+    updated_by = db.Column(db.String(80))
+
+    @classmethod
+    def current(cls):
+        """The single settings row, creating it with defaults on first use
+        (mirrors MailboxStatus's id=1 singleton pattern)."""
+        row = db.session.get(cls, 1)
+        if row is None:
+            row = cls(
+                id=1,
+                needs_review_threshold=DEFAULT_NEEDS_REVIEW_THRESHOLD,
+                phishing_threshold=DEFAULT_PHISHING_THRESHOLD,
+            )
+            db.session.add(row)
+            db.session.commit()
+        return row
+
+    def to_dict(self):
+        return {
+            "needs_review_threshold": self.needs_review_threshold,
+            "phishing_threshold": self.phishing_threshold,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "updated_by": self.updated_by,
         }

@@ -1,0 +1,28 @@
+{% extends "base_admin.html" %}
+{% block title %}Background Tasks — Sentinel AI Console{% endblock %}
+{% block page_title %}Background Tasks{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Background Tasks</h1>
+  <p>Celery worker status and the Gmail sync schedule. Only safe, real actions are available here.</p>
+</div>
+
+<div class="grid-2col">
+  <section class="panel">
+    <div class="panel-head"><h3>Celery</h3></div>
+    <div class="panel-body" id="celeryPanel"><div class="state"><span class="spinner" aria-hidden="true"></span></div></div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h3>Gmail sync</h3></div>
+    <div class="panel-body" id="gmailPanel"><div class="state"><span class="spinner" aria-hidden="true"></span></div></div>
+  </section>
+</div>
+
+<div class="row-wrap" style="margin-top:var(--sp-5)">
+  <button class="btn btn-primary btn-sm" id="triggerBtn">Trigger Gmail Sync</button>
+  <button class="btn btn-ghost btn-sm" id="refreshBtn">Refresh status</button>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/tasks.js') }}"></script>
+{% endblock %}

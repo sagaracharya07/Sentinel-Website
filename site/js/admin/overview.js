@@ -5,11 +5,35 @@
   const { esc, toast, relTime, setState } = window.SentinelUI;
   const A = window.AdminUI;
 
+  /* Onboarding checklist -- derived entirely from real GmailConnection
+     state each render, so it naturally "resumes" without any separate
+     progress storage and never re-forces a step that's already done. */
+  function renderOnboarding(c) {
+    const panel = document.getElementById('onboardingPanel');
+    const body = document.getElementById('onboardingBody');
+    const steps = [
+      { label: 'Connect Gmail', done: !!c },
+      { label: 'Verify Gmail labels', done: !!(c && c.labels_ready) },
+      { label: 'Activate protection', done: !!(c && c.protection_enabled) },
+      { label: 'Run first scan', done: !!(c && c.last_successful_sync_at) },
+    ];
+    if (steps.every((s) => s.done)) { panel.hidden = true; return; }
+    panel.hidden = false;
+    let firstPending = true;
+    body.innerHTML = '<div class="steps">' + steps.map((s) => {
+      const cls = s.done ? 'done' : (firstPending ? 'active' : '');
+      if (!s.done) firstPending = false;
+      return '<div class="step ' + cls + '"><span class="step-dot">' + (s.done ? '✓' : '') + '</span> ' + esc(s.label) + '</div>';
+    }).join('') + '</div>' +
+      '<a href="/admin/mailboxes" class="btn btn-primary btn-sm" style="margin-top:var(--sp-4)">Continue setup →</a>';
+  }
+
   async function loadProtection() {
     const panel = document.getElementById('protectionPanel');
     try {
       const data = await SentinelAPI.gmailStatus();
       const c = data.connection;
+      renderOnboarding(c);
       if (!c) {
         panel.innerHTML =
           '<div class="row-wrap"><span class="status-dot off"></span>' +

@@ -1,0 +1,25 @@
+{% extends "base_admin.html" %}
+{% block title %}Reported Emails — Sentinel AI Console{% endblock %}
+{% block page_title %}Reported Emails{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Reported Emails</h1>
+  <p>Employee-submitted <code>.eml</code> reports. Review each and set the final verdict — the submitting employee sees your decision.</p>
+</div>
+
+<div class="toolbar">
+  <div class="chips">
+    <button class="chip active" data-status="">All</button>
+    <button class="chip" data-status="pending">Awaiting Review</button>
+    <button class="chip" data-status="reviewed">Reviewed</button>
+  </div>
+  <span class="muted mono" id="resultCount" style="margin-left:auto;font-size:.8rem"></span>
+</div>
+
+<section class="panel">
+  <div id="listBody"><div class="state"><span class="spinner" aria-hidden="true"></span></div></div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/reports.js') }}"></script>
+{% endblock %}

@@ -136,7 +136,11 @@ def current_info():
     }
 
 
-def decide(phishing_proba: float):
+def decide(
+    phishing_proba: float,
+    needs_review_threshold: float = 0.50,
+    phishing_threshold: float = 0.75,
+):
     """
     Three-state operational decision from a raw phishing probability.
 
@@ -147,15 +151,35 @@ def decide(phishing_proba: float):
     that uncertainty visible instead of silently rounding it down to
     "Legitimate" or up to "Phishing".
 
-        >= 0.75  -> Phishing      (High risk)   -- quarantine
-        >= 0.50  -> Needs Review  (Medium risk) -- flag, do not quarantine
-        <  0.50  -> Legitimate    (Low risk)    -- no action
+        >= phishing_threshold      -> Phishing      (High risk)   -- quarantine
+        >= needs_review_threshold  -> Needs Review  (Medium risk) -- flag, do not quarantine
+        <  needs_review_threshold  -> Legitimate    (Low risk)    -- no action
+
+    Thresholds default to the project's original fixed cutoffs (0.75/0.50)
+    so every existing caller and test is unaffected; classify() below is the
+    only caller that overrides them, with values from AppSettings (Admin
+    Console -> Settings -> Detection Policy) -- kept as plain parameters
+    rather than a DB read here so this function stays a pure, independently
+    testable decision rule with no database/app-context dependency.
     """
-    if phishing_proba >= 0.75:
+    if phishing_proba >= phishing_threshold:
         return "Phishing", "High"
-    if phishing_proba >= 0.50:
+    if phishing_proba >= needs_review_threshold:
         return "Needs Review", "Medium"
     return "Legitimate", "Low"
+
+
+def _current_thresholds():
+    """Reads the admin-configurable Detection Policy thresholds. Falls back
+    to the fixed defaults if the settings table isn't reachable (e.g. a
+    migration hasn't run yet) rather than failing classification."""
+    try:
+        from models import AppSettings
+
+        row = AppSettings.current()
+        return row.needs_review_threshold, row.phishing_threshold
+    except Exception:
+        return 0.50, 0.75
 
 
 def classify(subject: str, body: str, sender: str = ""):
@@ -182,7 +206,12 @@ def classify(subject: str, body: str, sender: str = ""):
     phishing_idx = classes.index(1) if 1 in classes else len(classes) - 1
     phishing_proba = float(proba[phishing_idx])
 
-    label, risk_level = decide(phishing_proba)
+    needs_review_threshold, phishing_threshold = _current_thresholds()
+    label, risk_level = decide(
+        phishing_proba,
+        needs_review_threshold=needs_review_threshold,
+        phishing_threshold=phishing_threshold,
+    )
     score = round(phishing_proba * 100)
 
     # prediction_confidence is how sure the model is of *whichever* label

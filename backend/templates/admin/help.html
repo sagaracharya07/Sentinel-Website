@@ -1,0 +1,42 @@
+{% extends "base_admin.html" %}
+{% block title %}Help &amp; Documentation — Sentinel AI Console{% endblock %}
+{% block page_title %}Help &amp; Documentation{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Help &amp; Documentation</h1>
+  <p>Administrator-focused guidance. See also the public <a href="/help">Help Centre</a> and <a href="/threat-lab">Threat Lab</a>.</p>
+</div>
+
+<div class="feature-grid">
+  <div class="feature-card">
+    <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-plug"></use></svg></div>
+    <h3>Connecting Gmail</h3>
+    <p>Open Connected Mailboxes and click Connect Gmail. Grant the requested permissions in Google's consent screen, then confirm labels are ready with Test Connection.</p>
+  </div>
+  <div class="feature-card">
+    <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-activity"></use></svg></div>
+    <h3>Understanding verdicts</h3>
+    <p>Legitimate / Needs Review / Phishing come from the classifier's phishing probability plus structured security findings — see Detection Policy in Settings for the current threshold values.</p>
+  </div>
+  <div class="feature-card">
+    <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg></div>
+    <h3>Reviewing incidents</h3>
+    <p>Open any detection to see sender identity, authentication, links, attachments, and the model's explanation, then Confirm, Release, or Mark Legitimate.</p>
+  </div>
+  <div class="feature-card">
+    <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg></div>
+    <h3>Releasing a quarantined message</h3>
+    <p>Release only reports success once Gmail confirms the label move — if it fails, the message stays quarantined and an error is shown.</p>
+  </div>
+  <div class="feature-card">
+    <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg></div>
+    <h3>Connection troubleshooting</h3>
+    <p>Test Connection re-verifies credentials and labels. If it fails with an authentication error, Reconnect to refresh Google's consent and issue a new token.</p>
+  </div>
+  <div class="feature-card">
+    <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-server"></use></svg></div>
+    <h3>Current limitations</h3>
+    <p>One connected Gmail mailbox per deployment; no independent DNS validation of SPF/DKIM/DMARC beyond the provider's reported results; related-message grouping is basic (sender/domain).</p>
+  </div>
+</div>
+{% endblock %}

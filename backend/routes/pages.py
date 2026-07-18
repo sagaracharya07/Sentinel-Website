@@ -119,6 +119,136 @@ def admin_mailboxes():
     return render_template("admin/mailboxes.html", active_nav="mailboxes")
 
 
+@pages_bp.get("/admin/reports")
+def admin_reports_page():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/reports.html", active_nav="reports")
+
+
+@pages_bp.get("/admin/analytics")
+def admin_analytics():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/analytics.html", active_nav="analytics")
+
+
+@pages_bp.get("/admin/audit")
+def admin_audit():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/audit.html", active_nav="audit")
+
+
+@pages_bp.get("/admin/model")
+def admin_model():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/model.html", active_nav="model")
+
+
+@pages_bp.get("/admin/health")
+def admin_health():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/health.html", active_nav="health")
+
+
+@pages_bp.get("/admin/failed")
+def admin_failed():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/failed.html", active_nav="failed")
+
+
+@pages_bp.get("/admin/tasks")
+def admin_tasks():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/tasks.html", active_nav="tasks")
+
+
+@pages_bp.get("/admin/users")
+def admin_users():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/users.html", active_nav="users")
+
+
+@pages_bp.get("/admin/help")
+def admin_help():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/help.html", active_nav="")
+
+
+@pages_bp.get("/admin/settings/general")
+def admin_settings_general():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/settings/general.html", active_nav="settings")
+
+
+@pages_bp.get("/admin/settings/gmail")
+def admin_settings_gmail():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/settings/gmail.html", active_nav="settings")
+
+
+@pages_bp.get("/admin/settings/detection-policy")
+def admin_settings_detection_policy():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template(
+        "admin/settings/detection_policy.html", active_nav="settings"
+    )
+
+
+@pages_bp.get("/admin/settings/reporting")
+def admin_settings_reporting():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/settings/reporting.html", active_nav="settings")
+
+
+@pages_bp.get("/admin/settings/security")
+def admin_settings_security():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/settings/security.html", active_nav="settings")
+
+
+@pages_bp.get("/admin/settings/integrations")
+def admin_settings_integrations():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/settings/integrations.html", active_nav="settings")
+
+
+@pages_bp.get("/admin/settings/appearance")
+def admin_settings_appearance():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin/settings/appearance.html", active_nav="settings")
+
+
 # ---------------------------------------------------------------------------
 # User portal (any authenticated user -- employees and administrators alike;
 # an administrator can still report a suspicious email themselves)

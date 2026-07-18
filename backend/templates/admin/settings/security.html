@@ -1,0 +1,48 @@
+{% extends "base_admin.html" %}
+{% block title %}Settings — Security — Sentinel AI Console{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Settings</h1></div>
+<div class="settings-layout">
+  {% include "partials/_settings_nav.html" %}
+  <section class="panel">
+    <div class="panel-head"><h3>Security</h3></div>
+    <div class="panel-body">
+      <div class="setting-row">
+        <div><div class="s-label">Session cookie</div><div class="s-desc">HttpOnly, SameSite=Lax, Secure in production</div></div>
+        <div class="row"><span class="mono">Enforced</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="s-label">CSRF protection</div><div class="s-desc">Required on every state-changing request</div></div>
+        <div class="row"><span class="mono">Enabled</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="s-label">Rate limiting</div><div class="s-desc">Per-route limits, Redis-backed across replicas</div></div>
+        <div class="row"><span class="mono">Enabled</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="s-label">Password policy</div></div>
+        <div class="row"><span class="mono">Minimum 8 characters</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="s-label">Content Security Policy</div></div>
+        <div class="row"><span class="mono">default-src 'self'</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="s-label">Audit logging</div></div>
+        <div class="row"><span class="mono">Enabled</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+      <div class="setting-row">
+        <div><div class="s-label">OAuth token encryption</div><div class="s-desc">Separate key from the application secret</div></div>
+        <div class="row"><span class="mono">Enabled</span><span class="setting-tag deployment">Deployment Managed</span></div>
+      </div>
+    </div>
+    <div class="panel-body" style="padding-top:0">
+      <div class="callout">
+        <svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>
+        <div>These controls are set in code and environment configuration, not editable from the website — changing them requires a code change and redeploy, which keeps them out of reach of a compromised admin session.</div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

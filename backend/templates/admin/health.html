@@ -1,0 +1,20 @@
+{% extends "base_admin.html" %}
+{% block title %}System Health — Sentinel AI Console{% endblock %}
+{% block page_title %}System Health{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>System Health</h1>
+  <p>Real dependency checks — a service is only shown Healthy when it was actually verified this request. Anything that can't be meaningfully checked is labelled Unknown, never assumed.</p>
+</div>
+
+<div class="row-wrap" style="margin-bottom:var(--sp-4)">
+  <button class="btn btn-sm" id="refreshBtn"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg> Refresh</button>
+</div>
+
+<div id="healthGrid" class="metric-grid" style="grid-template-columns:repeat(3,1fr)">
+  <div class="state"><span class="spinner" aria-hidden="true"></span></div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/admin/health.js') }}"></script>
+{% endblock %}
