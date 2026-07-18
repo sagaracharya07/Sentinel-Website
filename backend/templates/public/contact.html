@@ -1,0 +1,48 @@
+{% extends "base_public.html" %}
+{% block title %}Project Enquiry — Sentinel AI{% endblock %}
+{% block content %}
+<section class="section wrap">
+  <div class="section-head">
+    <span class="eyebrow">Project Enquiry</span>
+    <h1>Get in touch</h1>
+    <p class="lead">Questions about the project, its architecture, or a demo request — send a message and it'll be logged for follow-up.</p>
+  </div>
+
+  <div class="grid-2col">
+    <section class="card">
+      <form id="contactForm">
+        <div class="field">
+          <label class="field-label" for="nameInput">Name</label>
+          <input type="text" id="nameInput" required>
+        </div>
+        <div class="field">
+          <label class="field-label" for="emailInput">Email</label>
+          <input type="email" id="emailInput" required>
+        </div>
+        <div class="field">
+          <label class="field-label" for="subjectInput">Subject</label>
+          <input type="text" id="subjectInput" placeholder="What's this about?">
+        </div>
+        <div class="field">
+          <label class="field-label" for="messageInput">Message</label>
+          <textarea id="messageInput" required maxlength="5000"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" id="contactBtn">Send message</button>
+        <div class="field-error" id="errMsg"></div>
+        <div class="callout" id="successMsg" style="display:none;margin-top:var(--sp-3)">
+          <svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>
+          <div>Thanks for reaching out — we'll get back to you soon.</div>
+        </div>
+      </form>
+    </section>
+    <section class="card">
+      <h3 style="margin-bottom:var(--sp-3)">Before you write in</h3>
+      <p class="muted" style="font-size:.88rem">Sentinel is a final-year computing project. Enquiries here go into the project's audit log and, if configured, an email notification — this is not a staffed support desk.</p>
+      <p class="muted" style="font-size:.88rem;margin-top:var(--sp-3)">For product questions, check the <a href="/faq">FAQ</a> or <a href="/help">Help Centre</a> first.</p>
+    </section>
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/contact.js') }}"></script>
+{% endblock %}

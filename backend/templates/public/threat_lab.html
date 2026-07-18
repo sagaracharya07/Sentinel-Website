@@ -1,0 +1,58 @@
+{% extends "base_public.html" %}
+{% block title %}Threat Lab — Sentinel AI{% endblock %}
+{% block content %}
+<section class="section wrap">
+  <div class="section-head">
+    <span class="eyebrow">Threat Lab</span>
+    <h1>Understand the indicators Sentinel looks for</h1>
+    <p class="lead">Educational reference — not live detection. See <a href="/demo">Live Demo</a> for an interactive walkthrough, or the Administrator Console's Incident Detail page for real findings.</p>
+  </div>
+
+  <div class="threat-grid">
+    <div class="threat-card reveal">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg> Phishing</h3>
+      <p>A message designed to trick the recipient into revealing credentials, making a payment, or installing malware — usually by impersonating a trusted sender.</p>
+    </div>
+    <div class="threat-card reveal">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-users"></use></svg> Business email compromise</h3>
+      <p>An attacker impersonates an executive, vendor, or colleague to request a wire transfer, gift cards, or sensitive data — often with no malicious link or attachment at all.</p>
+    </div>
+    <div class="threat-card reveal">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg> Credential harvesting</h3>
+      <p>A fake login page collects a victim's username and password, usually reached via a link that looks legitimate but resolves to an attacker-controlled domain.</p>
+    </div>
+    <div class="threat-card reveal">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg> Display-name impersonation</h3>
+      <p>The visible sender name says "PayPal Security" or "IT Support" while the actual email address belongs to an unrelated or lookalike domain.</p>
+    </div>
+    <div class="threat-card reveal">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg> Lookalike domains</h3>
+      <p>Domains that visually resemble a trusted one — substituting characters like "0" for "o", or adding a hyphen — to slip past a quick glance.</p>
+    </div>
+    <div class="threat-card reveal">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg> Reply-To deception</h3>
+      <p>The From address looks legitimate, but the Reply-To header quietly redirects any response to an attacker-controlled mailbox.</p>
+    </div>
+    <div class="threat-card reveal">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-plug"></use></svg> Suspicious links</h3>
+      <p>Displayed link text that doesn't match its real destination, URL shorteners hiding the true target, or raw IP-address destinations.</p>
+    </div>
+    <div class="threat-card reveal">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg> Suspicious attachments</h3>
+      <p>Executable, script, or macro-enabled file types, double extensions (e.g. <code>invoice.pdf.exe</code>), or archives concealing their real content.</p>
+    </div>
+    <div class="threat-card reveal">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-shield"></use></svg> SPF, DKIM &amp; DMARC</h3>
+      <p>Email authentication standards that let a receiving server verify a message really came from where it claims. Sentinel reads the provider's authentication results — it does not perform independent DNS validation.</p>
+    </div>
+    <div class="threat-card reveal">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg> False positives</h3>
+      <p>A legitimate message incorrectly flagged as risky. Sentinel's "Needs Review" state and human review process exist specifically to catch and correct these.</p>
+    </div>
+    <div class="threat-card reveal">
+      <h3><svg class="icon" aria-hidden="true"><use href="#i-users"></use></svg> Human review</h3>
+      <p>No automated classifier is perfect. An administrator can confirm, release, or override any verdict — and every override is recorded.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

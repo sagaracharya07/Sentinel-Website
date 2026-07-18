@@ -1,0 +1,48 @@
+{% extends "base_public.html" %}
+{% block title %}FAQ — Sentinel AI{% endblock %}
+{% block content %}
+<section class="section wrap">
+  <div class="section-head">
+    <span class="eyebrow">FAQ</span>
+    <h1>Frequently asked questions</h1>
+  </div>
+
+  <div class="wrap-narrow" style="margin-inline:0" id="faqList">
+    <div class="faq-item" data-open="false">
+      <button class="faq-q" type="button"><span>Does Sentinel block email before it's delivered?</span><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+      <div class="faq-a"><div class="faq-a-inner">No. Sentinel analyses mail after Gmail has already delivered it, then applies labels and can quarantine — moving a message out of the inbox — it does not intercept mail before delivery like an SMTP gateway would.</div></div>
+    </div>
+    <div class="faq-item" data-open="false">
+      <button class="faq-q" type="button"><span>Does Sentinel ever delete my email?</span><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+      <div class="faq-a"><div class="faq-a-inner">No. Quarantine and release are both Gmail label operations. Nothing is ever permanently deleted by Sentinel.</div></div>
+    </div>
+    <div class="faq-item" data-open="false">
+      <button class="faq-q" type="button"><span>What Gmail permissions does Sentinel need?</span><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+      <div class="faq-a"><div class="faq-a-inner">Only what's needed to read messages and manage labels via Google OAuth. See <a href="/security">Security &amp; Privacy</a> for the full explanation.</div></div>
+    </div>
+    <div class="faq-item" data-open="false">
+      <button class="faq-q" type="button"><span>How accurate is the classifier?</span><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+      <div class="faq-a"><div class="faq-a-inner">The project model achieved approximately 96.1% accuracy on its held-out evaluation dataset (7,539 test messages). No automated system is perfect — see "Needs Review" and human review below.</div></div>
+    </div>
+    <div class="faq-item" data-open="false">
+      <button class="faq-q" type="button"><span>What does "Needs Review" mean?</span><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+      <div class="faq-a"><div class="faq-a-inner">The model wasn't confident enough to call a message clearly legitimate or clearly phishing. It's held for an administrator to review rather than silently guessed either way.</div></div>
+    </div>
+    <div class="faq-item" data-open="false">
+      <button class="faq-q" type="button"><span>Can I connect Microsoft 365 / Outlook?</span><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+      <div class="faq-a"><div class="faq-a-inner">Not yet — Microsoft 365 is planned but not implemented. Sentinel does not integrate with Microsoft Graph today.</div></div>
+    </div>
+    <div class="faq-item" data-open="false">
+      <button class="faq-q" type="button"><span>What's the difference between .eml upload and Quick Analysis?</span><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+      <div class="faq-a"><div class="faq-a-inner">Uploading the original .eml file preserves full headers, authentication results, and real link destinations. Quick Analysis works on pasted text only and cannot provide any of that — it's a faster but more limited secondary check.</div></div>
+    </div>
+    <div class="faq-item" data-open="false">
+      <button class="faq-q" type="button"><span>Is this a commercial product?</span><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+      <div class="faq-a"><div class="faq-a-inner">No — Sentinel is a final-year computing project (NIT3004 IT Capstone Project 2, Victoria University), presented as a working prototype.</div></div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/public/faq.js') }}"></script>
+{% endblock %}

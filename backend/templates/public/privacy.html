@@ -1,0 +1,33 @@
+{% extends "base_public.html" %}
+{% block title %}Privacy Notice — Sentinel AI{% endblock %}
+{% block content %}
+<section class="section wrap">
+  <div class="section-head">
+    <span class="eyebrow">Legal</span>
+    <h1>Privacy Notice</h1>
+    <p class="lead">For the full technical explanation of Gmail data handling, see <a href="/security">Security &amp; Privacy</a>.</p>
+  </div>
+  <div class="prose">
+    <h2>What we collect</h2>
+    <p>Account details you provide (username, email, hashed password), email metadata and content needed to classify and investigate messages, uploaded <code>.eml</code> reports, and audit log entries recording administrator and system actions.</p>
+
+    <h2>Gmail data</h2>
+    <p>With a connected mailbox, Sentinel retrieves message content via the Gmail API to classify it, and applies labels for Legitimate/Needs Review/Phishing states. An encrypted OAuth refresh token is stored to maintain the connection — never your Google password.</p>
+
+    <h2>Retention</h2>
+    <p>Message bodies are purged after a fixed retention window, retaining only classification metadata. Reports and audit log entries are retained for the operation of the platform.</p>
+
+    <h2>Who can see what</h2>
+    <p>Security Administrators can see organisation-wide detections and connected-mailbox status. Employees can see only their own submitted reports.</p>
+
+    <h2>Third parties</h2>
+    <p>Sentinel uses Google's Gmail API and OAuth for mailbox access, and may use an email-sending provider for verification/reset emails and administrator notifications, if configured. No data is sold or shared for advertising.</p>
+
+    <h2>Your choices</h2>
+    <p>You can request your account be reviewed by an administrator, and a connected mailbox's owner can disconnect it at any time, revoking stored access immediately.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about this notice can be sent via the <a href="/contact">Project Enquiry</a> page.</p>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base_public.html" %}
+{% block title %}Security &amp; Privacy — Sentinel AI{% endblock %}
+{% block content %}
+<section class="section wrap">
+  <div class="section-head">
+    <span class="eyebrow">Security &amp; Privacy</span>
+    <h1>How Sentinel handles your Gmail data</h1>
+    <p class="lead">An honest account of permissions, storage, and limitations — as a final-year computing project, not a certified enterprise product.</p>
+  </div>
+
+  <div class="prose">
+    <h2>Gmail permissions</h2>
+    <p>Connecting a mailbox uses Google OAuth. Sentinel requests only the scopes needed to read messages, apply labels, and move messages between labels (for quarantine and release) — it does not request permission to send email as you or manage other Google services.</p>
+
+    <h2>OAuth token handling</h2>
+    <p>Sentinel stores an encrypted OAuth refresh token — never your Google password. Tokens are encrypted at rest using a key that is separate from the application's own secret key, and are never displayed in the interface, returned by any API, or written to logs.</p>
+
+    <h2>What is stored</h2>
+    <p>Classification metadata (verdict, risk level, findings) for every analysed message, and message content temporarily, to support investigation. Message bodies are purged after a retention window, retaining only the classification record.</p>
+
+    <h2>What is not stored</h2>
+    <p>Your Google password, OAuth access/refresh tokens in plain text, or attachment file contents (only metadata — filename, type, size, hash — is recorded; attachments are never opened or executed).</p>
+
+    <h2>Quarantine behaviour</h2>
+    <p>Quarantine and release are Gmail label operations. Sentinel never permanently deletes a message — "quarantine" moves it out of the inbox via a label, and "release" reverses that.</p>
+
+    <h2>Administrator access</h2>
+    <p>Only accounts with the Security Administrator role can connect, view, or manage a Gmail mailbox, or see organisation-wide detections. Employees see only their own submitted reports.</p>
+
+    <h2>Audit logging</h2>
+    <p>Every connection, disconnection, quarantine, release, and administrator decision is recorded in an audit log with actor, action, and timestamp — never message content or secrets.</p>
+
+    <h2>Disconnecting Gmail</h2>
+    <p>Disconnecting a mailbox immediately wipes its stored encrypted tokens from the database — this is a genuine revocation, not just a status flag.</p>
+
+    <h2>Data retention</h2>
+    <p>Message bodies are purged after a fixed retention window. Classification metadata, audit log entries, and reports are retained for the operation of the platform.</p>
+
+    <h2>Prototype limitations</h2>
+    <ul>
+      <li>Sentinel is a final-year computing project, evaluated in a development/demo environment — not independently security-audited or commercially certified.</li>
+      <li>SPF/DKIM/DMARC results are read from the provider's own authentication headers; Sentinel does not perform independent DNS validation.</li>
+      <li>This deployment supports one connected Gmail mailbox at a time.</li>
+      <li>No compliance certifications (SOC 2, ISO 27001, or similar) are claimed.</li>
+    </ul>
+  </div>
+</section>
+{% endblock %}

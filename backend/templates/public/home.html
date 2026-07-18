@@ -1,0 +1,126 @@
+{% extends "base_public.html" %}
+{% block title %}Sentinel AI — Stop phishing before it becomes a breach{% endblock %}
+{% block content %}
+
+<section class="hero wrap">
+  <div class="hero-grid">
+    <div>
+      <span class="eyebrow">Gmail-integrated · ML-assisted · Human-in-the-loop</span>
+      <h1>Stop phishing before it becomes a breach.</h1>
+      <p class="lead">Connect your organisation's Gmail account, analyse incoming messages automatically, and investigate suspicious email from one security console.</p>
+      <div class="hero-cta">
+        <a href="/login?next=/admin/mailboxes" class="btn btn-primary btn-lg">Connect Gmail</a>
+        <a href="/demo" class="btn btn-ghost btn-lg">View Live Detection Demo</a>
+      </div>
+      <p class="hero-note">Sentinel is a Gmail-integrated, machine-learning-assisted detection and response tool built as a final-year computing project — not a pre-delivery email gateway. <a href="/security">Read how it handles your data →</a></p>
+    </div>
+
+    <div class="flow-card reveal">
+      <div class="flow-title">Detection flow — illustrative</div>
+      <div class="flow-nodes flow-anim">
+        <div class="flow-node"><svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg> Sender identity checked<span class="dot"></span></div>
+        <div class="flow-node"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg> Authentication verified (SPF/DKIM/DMARC)<span class="dot"></span></div>
+        <div class="flow-node"><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg> Links &amp; attachments inspected<span class="dot"></span></div>
+        <div class="flow-node"><svg class="icon" aria-hidden="true"><use href="#i-pulse"></use></svg> Risk calculated by the classifier<span class="dot"></span></div>
+      </div>
+      <div class="flow-lanes">
+        <div class="flow-lane safe">Inbox</div>
+        <div class="flow-lane review">Needs Review</div>
+        <div class="flow-lane threat">Quarantine</div>
+      </div>
+      <div class="flow-caption">Illustrative animation — see the real pipeline in <a href="/how-it-works">How It Works</a>.</div>
+    </div>
+  </div>
+</section>
+
+<section class="section wrap">
+  <div class="section-head center">
+    <span class="eyebrow">Protect · Investigate · Respond</span>
+    <h2>One console for the full lifecycle</h2>
+    <p class="lead">From the moment mail arrives in a connected Gmail mailbox to the moment an administrator makes a final call.</p>
+  </div>
+  <div class="feature-grid">
+    <div class="feature-card reveal">
+      <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-plug"></use></svg></div>
+      <h3>Gmail monitoring</h3>
+      <p>Connect a mailbox once with Google OAuth. Sentinel detects changes through the Gmail API and analyses every new message automatically.</p>
+    </div>
+    <div class="feature-card reveal" data-reveal-delay="80">
+      <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-activity"></use></svg></div>
+      <h3>Three-state detection</h3>
+      <p>Every message is classified Legitimate, Needs Review, or Phishing — with a phishing probability and a prediction confidence, not a single opaque score.</p>
+    </div>
+    <div class="feature-card reveal" data-reveal-delay="160">
+      <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg></div>
+      <h3>Structured investigation</h3>
+      <p>Sender identity, Reply-To and Return-Path, authentication results, link destinations, and attachment metadata — as explainable findings, not a black box.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg></div>
+      <h3>Quarantine &amp; release</h3>
+      <p>Phishing is quarantined in Gmail using label operations — never deleted. Release returns a message to the inbox once an administrator confirms it's safe.</p>
+    </div>
+    <div class="feature-card reveal" data-reveal-delay="80">
+      <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg></div>
+      <h3>Employee reporting</h3>
+      <p>Anyone can upload a suspicious <code>.eml</code> for the same full analysis, then track its status through to an administrator's final verdict.</p>
+    </div>
+    <div class="feature-card reveal" data-reveal-delay="160">
+      <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg></div>
+      <h3>Full audit trail</h3>
+      <p>Every connection, detection action, and administrator decision is recorded — searchable, and never silently overwritten.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section wrap">
+  <div class="grid-2col" style="grid-template-columns:1fr 1fr">
+    <div class="card reveal">
+      <div class="row-wrap" style="margin-bottom:var(--sp-3)">
+        <span class="status-dot ok"></span><strong>Protection active</strong>
+        <span class="badge badge-muted" style="margin-left:auto">Sample preview</span>
+      </div>
+      <div class="kv" style="grid-template-columns:140px 1fr">
+        <dt>Mailbox</dt><dd>security@example-org.com</dd>
+        <dt>Monitoring</dt><dd>Gmail API, polling</dd>
+        <dt>Last sync</dt><dd>moments ago</dd>
+      </div>
+      <p class="muted" style="font-size:.82rem;margin-top:var(--sp-3)">This is a labelled preview of the Connected Mailboxes panel — not live data.</p>
+    </div>
+    <div class="card reveal" data-reveal-delay="100">
+      <div class="row-wrap" style="margin-bottom:var(--sp-3)">
+        <svg class="icon" aria-hidden="true" style="color:var(--cyan)"><use href="#i-activity"></use></svg><strong>Live detection feed</strong>
+        <span class="badge badge-muted" style="margin-left:auto">Sample preview</span>
+      </div>
+      <div class="stack-sm">
+        <div class="row" style="justify-content:space-between"><span>Invoice #4471 — A1 Roofing</span><span class="badge badge-legit">Legitimate</span></div>
+        <div class="row" style="justify-content:space-between"><span>Verify your account now</span><span class="badge badge-phish">Phishing</span></div>
+        <div class="row" style="justify-content:space-between"><span>Unusual sign-in detected</span><span class="badge badge-review">Needs Review</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section wrap">
+  <div class="section-head center">
+    <span class="eyebrow">Project results</span>
+    <h2>Verified performance, honestly reported</h2>
+  </div>
+  <div class="stat-row">
+    <div class="stat-box reveal"><b>~96.1%</b><span>Accuracy (held-out test)</span></div>
+    <div class="stat-box reveal" data-reveal-delay="60"><b>7,539</b><span>Test-set messages</span></div>
+    <div class="stat-box reveal" data-reveal-delay="120"><b>264</b><span>Automated tests</span></div>
+    <div class="stat-box reveal" data-reveal-delay="180"><b>3</b><span>Verdict states</span></div>
+  </div>
+  <p class="muted center" style="margin-top:var(--sp-4);font-size:.85rem">The project model achieved approximately 96.1% accuracy on its held-out evaluation dataset (v1, n=7,539). See <a href="/about">About the Project</a> for the full methodology.</p>
+</section>
+
+<section class="section wrap center">
+  <h2>Ready to see it running on real Gmail?</h2>
+  <p class="lead" style="margin-inline:auto">Sign in, connect a mailbox, and watch Sentinel analyse and label mail automatically.</p>
+  <div class="hero-cta" style="justify-content:center">
+    <a href="/login?next=/admin/mailboxes" class="btn btn-primary btn-lg">Connect Gmail</a>
+    <a href="/product" class="btn btn-ghost btn-lg">Explore the product</a>
+  </div>
+</section>
+{% endblock %}

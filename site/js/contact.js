@@ -1,6 +1,6 @@
 /* ==========================================================================
-   Contact form -- follows the same async-submit pattern as login.js
-   (disable button + loading text, show/hide #errMsg, try/catch around the
+   Contact form -- same async-submit pattern as the auth forms (disable
+   button + loading text, show/hide #errMsg, try/catch around the
    SentinelAPI call) for consistency across the site's forms.
    ========================================================================== */
 (() => {
@@ -23,7 +23,7 @@
       });
       form.reset();
       form.style.display = 'none';
-      successMsg.classList.add('show');
+      successMsg.style.display = 'flex';
     } catch (err) {
       errMsg.textContent = err.message || 'Something went wrong -- please try again.';
       errMsg.classList.add('show');

@@ -8,6 +8,7 @@
   const form = document.getElementById('forgotForm');
   const errMsg = document.getElementById('errMsg');
   const successMsg = document.getElementById('successMsg');
+  const successText = document.getElementById('successText');
   const btn = document.getElementById('forgotBtn');
 
   form.addEventListener('submit', async (e) => {
@@ -18,8 +19,8 @@
     try {
       const res = await SentinelAPI.forgotPassword(document.getElementById('email').value.trim());
       form.style.display = 'none';
-      successMsg.textContent = res.message || 'If that email is registered, a reset link has been sent.';
-      successMsg.classList.add('show');
+      successText.textContent = res.message || 'If that email is registered, a reset link has been sent.';
+      successMsg.style.display = 'flex';
     } catch (err) {
       errMsg.textContent = err.message || 'Something went wrong -- please try again.';
       errMsg.classList.add('show');

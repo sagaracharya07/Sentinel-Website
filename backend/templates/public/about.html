@@ -1,0 +1,57 @@
+{% extends "base_public.html" %}
+{% block title %}About the Project — Sentinel AI{% endblock %}
+{% block content %}
+<section class="section wrap">
+  <div class="section-head">
+    <span class="eyebrow">About the Project</span>
+    <h1>Sentinel AI is a final-year computing project</h1>
+    <p class="lead">Built for NIT3004 IT Capstone Project 2 at Victoria University. Presented honestly — as a working prototype, not a commercial product.</p>
+  </div>
+
+  <div class="prose">
+    <h2>The problem</h2>
+    <p>Phishing remains one of the most common paths to account compromise and data breach, and most organisations rely on generic spam filtering with little visibility into <em>why</em> a message was flagged, or a structured way for employees to report what they see.</p>
+
+    <h2>Objectives</h2>
+    <ul>
+      <li>Connect directly to a real Gmail mailbox via Google OAuth and the Gmail API</li>
+      <li>Classify incoming mail using a trained machine-learning model, not fixed rules alone</li>
+      <li>Explain every verdict with structured, human-readable findings</li>
+      <li>Give administrators real quarantine/release control without ever deleting mail</li>
+      <li>Give employees a simple way to report suspicious email and track its outcome</li>
+    </ul>
+
+    <h2>Architecture</h2>
+    <p>A Flask + Jinja2 backend with SQLAlchemy models, Alembic migrations, and Celery/Redis for background processing (Gmail sync, model retraining, scheduled tasks). PostgreSQL in production, SQLite for local development.</p>
+
+    <h2>The machine-learning model's role</h2>
+    <p>A trained classifier estimates a phishing probability from message content and structure. That probability, combined with structured security findings (authentication, sender identity, links, attachments), produces the operational verdict. The project model achieved approximately 96.1% accuracy on its held-out evaluation dataset (v1, 7,539 test messages).</p>
+
+    <h2>Gmail integration</h2>
+    <p>Google OAuth for connection, the Gmail API for retrieval and label operations, and either polling or optional Pub/Sub push for detecting new mail.</p>
+
+    <h2>Human review</h2>
+    <p>No classifier is perfect. The "Needs Review" state exists specifically for uncertain cases, and every automated verdict can be confirmed, released, or overridden by an administrator — with the override recorded in the audit log.</p>
+
+    <h2>Technology stack</h2>
+    <p>Python / Flask, SQLAlchemy, Alembic, Celery, Redis, PostgreSQL, scikit-learn, and a hand-built HTML/CSS/JavaScript front end (no SPA framework).</p>
+
+    <h2>Testing</h2>
+    <p>264 automated tests cover authentication, CSRF protection, the classifier, Gmail OAuth/sync/labels/parsing, <code>.eml</code> reporting, model governance, and access control.</p>
+
+    <h2>Security principles</h2>
+    <p>Encrypted OAuth tokens, CSRF protection on every state-changing request, role-based access control, rate limiting, security headers, and an append-only audit log.</p>
+
+    <h2>Known limitations</h2>
+    <ul>
+      <li>Single-mailbox prototype — one connected Gmail account per deployment</li>
+      <li>No independent DNS validation of SPF/DKIM/DMARC beyond the provider's reported results</li>
+      <li>Related-message grouping is basic (sender/domain), not a full correlation engine</li>
+      <li>No production security audit or compliance certification</li>
+    </ul>
+
+    <h2>Future development</h2>
+    <p>Microsoft 365 / Graph integration, richer campaign correlation, and expanded notification channels are natural next steps beyond this project's current scope.</p>
+  </div>
+</section>
+{% endblock %}

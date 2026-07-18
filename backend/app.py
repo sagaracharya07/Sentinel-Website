@@ -373,7 +373,7 @@ def csrf_token():
 
 @app.route("/")
 def root():
-    return render_template("index.html", active_page="home")
+    return render_template("public/home.html", active_page="home")
 
 
 @app.route("/<path:filename>")

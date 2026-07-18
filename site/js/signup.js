@@ -8,6 +8,7 @@
   const form = document.getElementById('signupForm');
   const errMsg = document.getElementById('errMsg');
   const successMsg = document.getElementById('successMsg');
+  const successText = document.getElementById('successText');
   const btn = document.getElementById('signupBtn');
 
   form.addEventListener('submit', async (e) => {
@@ -22,8 +23,8 @@
         document.getElementById('password').value
       );
       form.style.display = 'none';
-      successMsg.textContent = res.message || 'Account created -- check your email to verify before logging in.';
-      successMsg.classList.add('show');
+      successText.textContent = res.message || 'Account created — check your email to verify before signing in.';
+      successMsg.style.display = 'flex';
     } catch (err) {
       errMsg.textContent = err.message || 'Could not create account';
       errMsg.classList.add('show');

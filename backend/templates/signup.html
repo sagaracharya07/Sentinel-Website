@@ -1,29 +1,32 @@
 {% extends "base_auth.html" %}
-{% block title %}Sign up — Sentinel AI{% endblock %}
+{% block title %}Create account — Sentinel AI{% endblock %}
 {% block content %}
-    <div class="login-sub">Create a free account to scan email and keep your own history.</div>
+<div class="auth-sub">Create an account to report suspicious email and track your reports.</div>
 
-    <form id="signupForm" autocomplete="on">
-      <div class="field">
-        <label class="field-label" for="username">Username</label>
-        <input type="text" id="username" name="username" autocomplete="username" required minlength="3" maxlength="80">
-      </div>
-      <div class="field">
-        <label class="field-label" for="email">Email</label>
-        <input type="email" id="email" name="email" autocomplete="email" required>
-      </div>
-      <div class="field">
-        <label class="field-label" for="password">Password</label>
-        <input type="password" id="password" name="password" autocomplete="new-password" required minlength="8">
-      </div>
-      <button type="submit" class="btn btn-primary login-btn" id="signupBtn">Create account</button>
-      <div class="err-msg" id="errMsg"></div>
-      <div class="success-msg" id="successMsg"></div>
-    </form>
+<form id="signupForm" autocomplete="on">
+  <div class="field">
+    <label class="field-label" for="username">Username</label>
+    <input type="text" id="username" name="username" autocomplete="username" required minlength="3" maxlength="80">
+  </div>
+  <div class="field">
+    <label class="field-label" for="email">Email</label>
+    <input type="email" id="email" name="email" autocomplete="email" required>
+  </div>
+  <div class="field">
+    <label class="field-label" for="password">Password</label>
+    <input type="password" id="password" name="password" autocomplete="new-password" required minlength="8">
+    <div class="field-hint">At least 8 characters.</div>
+  </div>
+  <button type="submit" class="btn btn-primary auth-btn" id="signupBtn">Create account</button>
+  <div class="field-error" id="errMsg"></div>
+  <div class="callout" id="successMsg" style="display:none;margin-top:var(--sp-3)">
+    <svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><div id="successText"></div>
+  </div>
+</form>
 
-    <div class="auth-links" style="justify-content:center">
-      <span style="color:var(--paper-muted)">Already have an account? <a href="/login.html">Log in</a></span>
-    </div>
+<div class="auth-links" style="justify-content:center">
+  <span>Already have an account? <a href="/login">Sign in</a></span>
+</div>
 {% endblock %}
 {% block extra_scripts %}
 <script src="{{ url_for('static_files', filename='js/signup.js') }}"></script>

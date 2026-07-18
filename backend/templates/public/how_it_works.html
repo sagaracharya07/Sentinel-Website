@@ -1,0 +1,69 @@
+{% extends "base_public.html" %}
+{% block title %}How It Works — Sentinel AI{% endblock %}
+{% block content %}
+<section class="section wrap">
+  <div class="section-head">
+    <span class="eyebrow">How it works</span>
+    <h1>The real technical process — no black box</h1>
+    <p class="lead">Sentinel works <strong>after</strong> Google delivers your mail, not before. It is not a pre-delivery gateway or an SMTP filter — it analyses and acts on messages that have already reached Gmail.</p>
+  </div>
+
+  <div class="wrap-narrow" style="margin-inline:0">
+    <div class="timeline reveal">
+      <div class="timeline-item">
+        <div class="timeline-num">1</div>
+        <div class="timeline-body"><h3>Connect Gmail</h3><p>An administrator starts the connection from Connected Mailboxes.</p></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-num">2</div>
+        <div class="timeline-body"><h3>Complete Google OAuth</h3><p>Google's consent screen grants Sentinel the specific scopes it needs — never your password.</p></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-num">3</div>
+        <div class="timeline-body"><h3>Activate protection</h3><p>Sentinel verifies its Gmail labels exist and begins monitoring.</p></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-num">4</div>
+        <div class="timeline-body"><h3>Detect mailbox changes</h3><p>Gmail API polling (with optional Pub/Sub push) detects new messages.</p></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-num">5</div>
+        <div class="timeline-body"><h3>Retrieve the full email</h3><p>The complete message is fetched — not just a preview or snippet.</p></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-num">6</div>
+        <div class="timeline-body"><h3>Parse MIME content</h3><p>Headers, body, and attachment structure are extracted safely.</p></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-num">7</div>
+        <div class="timeline-body"><h3>Analyse sender &amp; authentication</h3><p>Display name, Reply-To, Return-Path, and SPF/DKIM/DMARC results are checked.</p></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-num">8</div>
+        <div class="timeline-body"><h3>Analyse links &amp; attachments</h3><p>Real link destinations and attachment metadata are inspected.</p></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-num">9</div>
+        <div class="timeline-body"><h3>Run the classifier</h3><p>A trained machine-learning model produces a phishing probability and prediction confidence.</p></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-num">10</div>
+        <div class="timeline-body"><h3>Generate the operational verdict</h3><p>Model output and structured findings combine into Legitimate, Needs Review, or Phishing.</p></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-num">11</div>
+        <div class="timeline-body"><h3>Apply the Gmail action</h3><p>A label is applied; Phishing is quarantined via a label move — nothing is ever deleted.</p></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-num">12</div>
+        <div class="timeline-body"><h3>Investigate &amp; respond</h3><p>An administrator reviews the incident and confirms, releases, or escalates it.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:var(--sp-6)">
+    <svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg>
+    <div>Sentinel does not intercept mail before delivery. Detection begins after Gmail has already accepted and stored the message.</div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base_public.html" %}
+{% block title %}Help Centre — Sentinel AI{% endblock %}
+{% block content %}
+<section class="section wrap">
+  <div class="section-head">
+    <span class="eyebrow">Help Centre</span>
+    <h1>Get the most out of Sentinel</h1>
+    <p class="lead">Practical guidance for connecting Gmail, understanding verdicts, and reporting suspicious mail.</p>
+  </div>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-plug"></use></svg></div>
+      <h3>Connecting Gmail</h3>
+      <p>Sign in as a Security Administrator, open Connected Mailboxes, and click Connect Gmail. Grant the requested permissions, and protection activates automatically once Sentinel verifies its labels.</p>
+    </div>
+    <div class="feature-card">
+      <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg></div>
+      <h3>Gmail permissions explained</h3>
+      <p>Sentinel requests only the scopes needed to read messages and manage labels — see <a href="/security">Security &amp; Privacy</a> for the full breakdown.</p>
+    </div>
+    <div class="feature-card">
+      <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-activity"></use></svg></div>
+      <h3>Understanding verdicts</h3>
+      <p>Legitimate, Needs Review, and Phishing — plus what phishing probability and prediction confidence actually mean. See the <a href="/threat-lab">Threat Lab</a> and the portal's Security Guide.</p>
+    </div>
+    <div class="feature-card">
+      <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg></div>
+      <h3>Reviewing incidents</h3>
+      <p>Open any detection to see sender identity, authentication results, links, attachments, and the model's explanation — then confirm, release, or escalate.</p>
+    </div>
+    <div class="feature-card">
+      <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg></div>
+      <h3>Reporting suspicious email</h3>
+      <p>From the user portal, upload the original <code>.eml</code> file (recommended) or use Quick Analysis for a faster, more limited pasted-text check.</p>
+    </div>
+    <div class="feature-card">
+      <div class="f-icon"><svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg></div>
+      <h3>Connection troubleshooting</h3>
+      <p>Use Test Connection on the Connected Mailboxes page to verify credentials and labels. If it fails, Reconnect to refresh Google's consent.</p>
+    </div>
+  </div>
+
+  <div class="center" style="margin-top:var(--sp-6)">
+    <a href="/faq" class="btn btn-primary">Read the FAQ</a>
+  </div>
+</section>
+{% endblock %}

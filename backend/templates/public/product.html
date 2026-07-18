@@ -1,0 +1,100 @@
+{% extends "base_public.html" %}
+{% block title %}Product — Sentinel AI{% endblock %}
+{% block content %}
+<section class="section wrap">
+  <div class="section-head">
+    <span class="eyebrow">Product</span>
+    <h1>Everything Sentinel does, organised around one workflow</h1>
+    <p class="lead">Protect, Investigate, Respond, and Report — the four capabilities that make up the CONNECT → DETECT → INVESTIGATE → REMEDIATE lifecycle.</p>
+  </div>
+
+  <div class="pillar-row reveal">
+    <div>
+      <span class="eyebrow">01 · Protect</span>
+      <h2 style="margin-top:6px">Gmail monitoring that never sleeps</h2>
+      <p class="lead" style="margin-top:8px">Connect a mailbox once with Google OAuth. Sentinel detects mailbox changes through the Gmail API, retrieves each new message, and classifies it into one of three states.</p>
+      <ul style="margin-top:var(--sp-4)">
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Continuous Gmail API monitoring (polling, with optional push via Pub/Sub)</li>
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Three-state verdicts: Legitimate, Needs Review, Phishing</li>
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Gmail labels applied automatically for each state</li>
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Phishing quarantined via label move — never deleted</li>
+      </ul>
+    </div>
+    <div class="pillar-visual">
+      <div class="row-wrap" style="margin-bottom:var(--sp-3)"><span class="status-dot ok"></span><strong>Protection active</strong></div>
+      <div class="stack-sm">
+        <div class="row" style="justify-content:space-between"><span class="muted">Monitoring mode</span><span class="mono">Gmail API — polling</span></div>
+        <div class="row" style="justify-content:space-between"><span class="muted">Labels</span><span class="mono">Processed · Needs Review · Quarantine</span></div>
+        <div class="row" style="justify-content:space-between"><span class="muted">Action on phishing</span><span class="mono">Quarantine label</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pillar-row reveal">
+    <div>
+      <span class="eyebrow">02 · Investigate</span>
+      <h2 style="margin-top:6px">See exactly why a message was flagged</h2>
+      <p class="lead" style="margin-top:8px">Every detection opens into a full incident view with structured, explainable findings — never a single opaque score.</p>
+      <ul style="margin-top:var(--sp-4)">
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Sender identity: display-name, Reply-To, Return-Path mismatches</li>
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> SPF / DKIM / DMARC authentication results</li>
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Link analysis: displayed text vs. real destination</li>
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Attachment metadata (filename, type, size, hash — never executed)</li>
+      </ul>
+    </div>
+    <div class="pillar-visual">
+      <div class="finding"><span class="sev high"></span><div><div class="f-title">Sender / brand mismatch</div><div class="f-evidence">Display name "PayPal", domain paypa1-support.com</div></div></div>
+      <div class="finding"><span class="sev high"></span><div><div class="f-title">SPF check returned fail</div><div class="f-evidence">Authentication-Results reported spf=fail</div></div></div>
+      <div class="finding"><span class="sev medium"></span><div><div class="f-title">Displayed link domain differs from destination</div><div class="f-evidence">shows paypal.com, goes to bit.ly</div></div></div>
+    </div>
+  </div>
+
+  <div class="pillar-row reveal">
+    <div>
+      <span class="eyebrow">03 · Respond</span>
+      <h2 style="margin-top:6px">Take action, with a record of every decision</h2>
+      <p class="lead" style="margin-top:8px">Confirm phishing, release a false positive back to the inbox, mark legitimate, or find related messages by sender or domain.</p>
+      <ul style="margin-top:var(--sp-4)">
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> One-click confirm, release, or mark-legitimate</li>
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Release only succeeds after Gmail confirms the label move</li>
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Related-message search by sender or domain</li>
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Every action written to the audit log</li>
+      </ul>
+    </div>
+    <div class="pillar-visual">
+      <div class="row-wrap" style="gap:8px;flex-wrap:wrap">
+        <button class="btn btn-danger btn-sm" disabled>Confirm Phishing</button>
+        <button class="btn btn-success btn-sm" disabled>Release to Inbox</button>
+        <button class="btn btn-ghost btn-sm" disabled>Mark Legitimate</button>
+      </div>
+      <p class="muted" style="font-size:.82rem;margin-top:var(--sp-4)">Illustrative — the real actions live in the Administrator Console's Incident Detail page.</p>
+    </div>
+  </div>
+
+  <div class="pillar-row reveal">
+    <div>
+      <span class="eyebrow">04 · Report</span>
+      <h2 style="margin-top:6px">A reporting path for everyone</h2>
+      <p class="lead" style="margin-top:8px">Any employee can upload a suspicious message's original <code>.eml</code> file for the same full analysis Gmail mail receives.</p>
+      <ul style="margin-top:var(--sp-4)">
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Upload the original <code>.eml</code> for full-fidelity analysis</li>
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Track status from submission to final verdict</li>
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Administrator review sets the final decision</li>
+        <li class="row"><svg class="icon" aria-hidden="true" style="color:var(--green)"><use href="#i-check"></use></svg> Quick Analysis for a faster, more limited pasted-text check</li>
+      </ul>
+    </div>
+    <div class="pillar-visual">
+      <div class="steps">
+        <div class="step done"><span class="step-dot">1</span> Submitted</div>
+        <div class="step done"><span class="step-dot">2</span> Automatically Analysed</div>
+        <div class="step active"><span class="step-dot">3</span> Awaiting Administrator Review</div>
+        <div class="step"><span class="step-dot">4</span> Final Decision</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="center" style="margin-top:var(--sp-6)">
+    <a href="/how-it-works" class="btn btn-primary btn-lg">See the full technical process →</a>
+  </div>
+</section>
+{% endblock %}

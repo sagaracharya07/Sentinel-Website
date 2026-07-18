@@ -1,34 +1,36 @@
 {% extends "base_auth.html" %}
-{% block title %}Log in — Sentinel AI{% endblock %}
+{% block title %}Sign in — Sentinel AI{% endblock %}
 {% block content %}
-    <div class="login-sub">AI Phishing Detection Platform — sign in to continue</div>
+<div class="auth-sub">Sign in to your Sentinel AI account</div>
 
-    <form id="loginForm" autocomplete="on">
-      <div class="field">
-        <label class="field-label" for="username">Username</label>
-        <input type="text" id="username" name="username" autocomplete="username" required>
-      </div>
-      <div class="field">
-        <label class="field-label" for="password">Password</label>
-        <input type="password" id="password" name="password" autocomplete="current-password" required>
-      </div>
-      <button type="submit" class="btn btn-primary login-btn" id="loginBtn">Log in</button>
-      <div class="err-msg" id="errMsg"></div>
-      <div class="success-msg" id="successMsg"></div>
-    </form>
+<form id="loginForm" autocomplete="on">
+  <div class="field">
+    <label class="field-label" for="username">Username</label>
+    <input type="text" id="username" name="username" autocomplete="username" required>
+  </div>
+  <div class="field">
+    <label class="field-label" for="password">Password</label>
+    <input type="password" id="password" name="password" autocomplete="current-password" required>
+  </div>
+  <button type="submit" class="btn btn-primary auth-btn" id="loginBtn">Sign in</button>
+  <div class="field-error" id="errMsg"></div>
+  <div class="callout" id="successMsg" style="display:none;margin-top:var(--sp-3)">
+    <svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><div id="successText"></div>
+  </div>
+</form>
 
-    <div class="auth-links">
-      <a href="/forgot-password.html">Forgot password?</a>
-      <a href="/signup.html">Create an account</a>
-    </div>
+<div class="auth-links">
+  <a href="/forgot-password">Forgot password?</a>
+  <a href="/signup">Create an account</a>
+</div>
 
-    <div class="demo-hint">
-      This is an academic capstone build — two seeded demo accounts are provided
-      for marking/demo purposes. Your role (User or Admin) is determined by the
-      account itself and enforced on every API request, not chosen at login.
-      <div class="role-row" style="margin-top:8px"><span>Admin console access:</span><b>admin / admin123</b></div>
-      <div class="role-row"><span>Standard scanner access:</span><b>user / user123</b></div>
-    </div>
+<div class="demo-hint">
+  This is an academic capstone build — two seeded demo accounts are provided for marking/demo purposes.
+  Your role (User or Security Administrator) is determined by the account itself and enforced on every
+  API request, not chosen at login.
+  <div class="role-row" style="margin-top:8px"><span>Administrator console:</span><b>admin / admin123</b></div>
+  <div class="role-row"><span>Employee portal:</span><b>user / user123</b></div>
+</div>
 {% endblock %}
 {% block extra_scripts %}
 <script src="{{ url_for('static_files', filename='js/login.js') }}"></script>

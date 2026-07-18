@@ -1,0 +1,34 @@
+{% extends "base_public.html" %}
+{% block title %}Live Demo — Sentinel AI{% endblock %}
+{% block content %}
+<section class="section wrap">
+  <div class="section-head">
+    <span class="eyebrow">Live Demo</span>
+    <h1>See the analysis pipeline in action</h1>
+    <p class="lead">Interactive product demonstration — <strong>simulated data</strong>. Pick a sample message, run the analysis, and watch each stage complete.</p>
+  </div>
+
+  <div class="callout" style="margin-bottom:var(--sp-6)">
+    <svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg>
+    <div>This demo uses simulated messages and does not touch any real mailbox or database record.</div>
+  </div>
+
+  <div class="demo-cards" id="demoCards"></div>
+
+  <div class="card" style="margin-top:var(--sp-6)" id="demoStageCard" hidden>
+    <div class="row-wrap" style="margin-bottom:var(--sp-2)">
+      <strong id="stageSubject"></strong>
+      <button class="btn btn-ghost btn-sm" id="demoResetBtn" style="margin-left:auto">Reset</button>
+    </div>
+    <div class="muted mono" id="stageSender" style="font-size:.82rem;margin-bottom:var(--sp-3)"></div>
+
+    <div class="demo-progress" id="demoProgress"></div>
+    <div class="steps" id="demoSteps"></div>
+
+    <div id="demoResult" class="stack" style="margin-top:var(--sp-5)"></div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static_files', filename='js/public/demo.js') }}"></script>
+{% endblock %}

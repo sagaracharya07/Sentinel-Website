@@ -49,6 +49,23 @@ def login_page():
     return render_template("login.html")
 
 
+@pages_bp.get("/signup")
+def signup_page():
+    if session.get("username"):
+        return redirect("/admin" if session.get("role") == "admin" else "/app")
+    return render_template("signup.html")
+
+
+@pages_bp.get("/forgot-password")
+def forgot_password_page():
+    return render_template("forgot-password.html")
+
+
+@pages_bp.get("/reset-password")
+def reset_password_page():
+    return render_template("reset-password.html")
+
+
 # ---------------------------------------------------------------------------
 # Administrator console (role=admin only)
 # ---------------------------------------------------------------------------
@@ -170,3 +187,69 @@ def portal_preferences():
     if guard:
         return guard
     return render_template("portal/preferences.html", active_nav="preferences")
+
+
+# ---------------------------------------------------------------------------
+# Public marketing website. Static content only -- no auth, no per-request
+# data (the one exception, the public demo-scan endpoint used by the Live
+# Demo page, already existed before this revamp). `active_page` drives the
+# nav's active-link highlight (see partials/_nav_public.html).
+# ---------------------------------------------------------------------------
+@pages_bp.get("/product")
+def public_product():
+    return render_template("public/product.html", active_page="product")
+
+
+@pages_bp.get("/how-it-works")
+def public_how_it_works():
+    return render_template("public/how_it_works.html", active_page="how-it-works")
+
+
+@pages_bp.get("/integrations")
+def public_integrations():
+    return render_template("public/integrations.html", active_page="integrations")
+
+
+@pages_bp.get("/demo")
+def public_demo():
+    return render_template("public/demo.html", active_page="demo")
+
+
+@pages_bp.get("/threat-lab")
+def public_threat_lab():
+    return render_template("public/threat_lab.html", active_page="threat-lab")
+
+
+@pages_bp.get("/security")
+def public_security():
+    return render_template("public/security.html", active_page="security")
+
+
+@pages_bp.get("/about")
+def public_about():
+    return render_template("public/about.html", active_page="about")
+
+
+@pages_bp.get("/help")
+def public_help():
+    return render_template("public/help.html", active_page="help")
+
+
+@pages_bp.get("/faq")
+def public_faq():
+    return render_template("public/faq.html", active_page="faq")
+
+
+@pages_bp.get("/contact")
+def public_contact():
+    return render_template("public/contact.html", active_page="contact")
+
+
+@pages_bp.get("/terms")
+def public_terms():
+    return render_template("public/terms.html", active_page="terms")
+
+
+@pages_bp.get("/privacy")
+def public_privacy():
+    return render_template("public/privacy.html", active_page="privacy")

@@ -1,0 +1,60 @@
+{% extends "base_public.html" %}
+{% block title %}Integrations — Sentinel AI{% endblock %}
+{% block content %}
+<section class="section wrap">
+  <div class="section-head">
+    <span class="eyebrow">Integrations</span>
+    <h1>Only what actually works — clearly labelled</h1>
+    <p class="lead">We show real integration status, not aspirational logos. Every entry below is labelled Available, Beta, Development Fallback, or Planned.</p>
+  </div>
+
+  <div class="wrap-narrow" style="margin-inline:0">
+    <div class="integration-row reveal">
+      <div class="i-icon"><svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg></div>
+      <div><h3>Gmail / Google Workspace</h3><p>Google OAuth, Gmail API monitoring, Gmail labels, quarantine and release, connection management from the website.</p></div>
+      <span class="badge badge-available">Available</span>
+    </div>
+    <div class="integration-row reveal">
+      <div class="i-icon"><svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg></div>
+      <div><h3>.eml Upload</h3><p>Employee-submitted original email files, analysed through the same pipeline as Gmail mail.</p></div>
+      <span class="badge badge-available">Available</span>
+    </div>
+    <div class="integration-row reveal">
+      <div class="i-icon"><svg class="icon" aria-hidden="true"><use href="#i-server"></use></svg></div>
+      <div><h3>Legacy IMAP</h3><p>An earlier development fallback for testing without Google OAuth. Off by default; limited compared to the Gmail integration and not the recommended path.</p></div>
+      <span class="badge badge-fallback">Development Fallback</span>
+    </div>
+    <div class="integration-row reveal">
+      <div class="i-icon"><svg class="icon" aria-hidden="true"><use href="#i-plug"></use></svg></div>
+      <div><h3>Microsoft 365</h3><p>Not implemented. Sentinel does not integrate with Microsoft Graph today.</p></div>
+      <span class="badge badge-planned">Planned</span>
+    </div>
+    <div class="integration-row reveal">
+      <div class="i-icon"><svg class="icon" aria-hidden="true"><use href="#i-activity"></use></svg></div>
+      <div><h3>Related-message campaigns</h3><p>Basic grouping by sender or domain to spot related messages — not a full correlation engine.</p></div>
+      <span class="badge badge-beta">Beta</span>
+    </div>
+  </div>
+
+  <div class="section-head" style="margin-top:var(--sp-7)">
+    <h2>Infrastructure</h2>
+  </div>
+  <div class="wrap-narrow" style="margin-inline:0">
+    <div class="integration-row">
+      <div class="i-icon"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg></div>
+      <div><h3>Celery + Redis</h3><p>Background job processing for Gmail sync, model retraining, and scheduled tasks.</p></div>
+      <span class="badge badge-available">Available</span>
+    </div>
+    <div class="integration-row">
+      <div class="i-icon"><svg class="icon" aria-hidden="true"><use href="#i-server"></use></svg></div>
+      <div><h3>PostgreSQL / SQLite</h3><p>Postgres in production, SQLite for local development — schema managed by Alembic migrations.</p></div>
+      <span class="badge badge-available">Available</span>
+    </div>
+    <div class="integration-row">
+      <div class="i-icon"><svg class="icon" aria-hidden="true"><use href="#i-bell"></use></svg></div>
+      <div><h3>Google Pub/Sub push</h3><p>Optional real-time Gmail push notifications as an alternative to polling — requires a public HTTPS endpoint and a configured topic.</p></div>
+      <span class="badge badge-beta">Beta</span>
+    </div>
+  </div>
+</section>
+{% endblock %}

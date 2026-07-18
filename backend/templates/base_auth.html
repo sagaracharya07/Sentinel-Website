@@ -1,63 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-shell="auth">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}Sentinel AI{% endblock %}</title>
-<link rel="stylesheet" href="{{ url_for('static_files', filename='css/styles.css') }}">
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/foundation.css') }}">
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/components.css') }}">
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/shells.css') }}">
 <style>
-  body{min-height:100vh;display:flex;flex-direction:column}
-  .login-wrap{
-    flex:1;display:flex;align-items:center;justify-content:center;padding:40px 20px;position:relative;
-  }
-  .login-card{
-    width:100%;max-width:400px;background:var(--paper-2);border:1px solid var(--paper-line);
-    border-radius:var(--radius-l);box-shadow:var(--shadow-2);padding:36px 32px;position:relative;z-index:2;
-  }
-  .login-brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;
-    color:var(--paper-text);font-size:1.1rem;letter-spacing:.04em;margin-bottom:6px}
-  .login-brand .dot{width:9px;height:9px;border-radius:2px;background:var(--scan);box-shadow:0 0 14px 2px var(--scan)}
-  .login-brand .brand-ai{color:var(--scan)}
-  .login-sub{color:var(--paper-muted);font-size:.88rem;margin-bottom:28px}
-  label.field-label{display:block;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;
-    letter-spacing:.05em;color:var(--paper-muted);margin-bottom:6px;font-weight:600}
-  .field{margin-bottom:18px}
-  input[type=text], input[type=password], input[type=email]{
-    width:100%;border:1px solid var(--paper-line);border-radius:var(--radius-s);
-    padding:12px 14px;font-family:var(--body);font-size:.92rem;background:var(--paper-1);color:var(--paper-text);
-  }
-  input:focus{outline:none;border-color:var(--scan);background:var(--paper-2)}
-  .login-btn{width:100%;justify-content:center;margin-top:6px}
-  .err-msg{color:var(--threat);font-size:.82rem;font-family:var(--mono);margin-top:14px;display:none;
-    background:var(--threat-bg);border:1px solid var(--threat-line);border-radius:var(--radius-s);padding:10px 12px}
-  .err-msg.show{display:block}
-  .success-msg{color:var(--safe-text);font-size:.82rem;font-family:var(--mono);margin-top:14px;display:none;
-    background:var(--safe-bg);border:1px solid var(--safe-line);border-radius:var(--radius-s);padding:10px 12px}
-  .success-msg.show{display:block}
-  .demo-hint{
-    margin-top:24px;padding:14px 16px;background:var(--paper-1);border:1px dashed var(--paper-line);
-    border-radius:var(--radius-s);font-size:.78rem;color:var(--paper-muted);line-height:1.7;
-  }
-  .demo-hint b{color:var(--paper-text);font-family:var(--mono)}
-  .demo-hint .role-row{display:flex;justify-content:space-between;font-family:var(--mono)}
-  .auth-links{display:flex;justify-content:space-between;margin-top:14px;font-size:.82rem}
-  .back-link{display:block;text-align:center;margin-top:18px;font-size:.82rem;color:var(--paper-muted)}
-  .back-link:hover{color:var(--scan)}
+  .auth-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--sp-5); }
+  .auth-brand { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: var(--text); margin-bottom: var(--sp-6); }
+  .auth-brand .mark { width: 26px; height: 26px; color: var(--cyan); }
+  .auth-card { width: 100%; max-width: 400px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-l); box-shadow: var(--shadow-pop); padding: var(--sp-6); }
+  .auth-sub { color: var(--text-muted); font-size: var(--fs-sm); margin-bottom: var(--sp-5); }
+  .auth-btn { width: 100%; justify-content: center; margin-top: 4px; }
+  .auth-links { display: flex; justify-content: space-between; margin-top: var(--sp-4); font-size: var(--fs-sm); color: var(--text-muted); }
+  .auth-back { display: block; text-align: center; margin-top: var(--sp-5); font-size: var(--fs-sm); color: var(--text-muted); }
+  .auth-back:hover { color: var(--cyan); }
+  .demo-hint { margin-top: var(--sp-5); padding: var(--sp-3) var(--sp-4); background: var(--panel-inset); border: 1px dashed var(--border); border-radius: var(--radius-s); font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.7; }
+  .demo-hint b { color: var(--text); font-family: var(--font-mono); }
+  .demo-hint .role-row { display: flex; justify-content: space-between; font-family: var(--font-mono); }
 </style>
 {% block extra_style %}{% endblock %}
 </head>
 <body>
-
-<div class="circuit-bg app-mask" style="position:fixed;inset:0;z-index:0"></div>
-
-<div class="login-wrap">
-  <div class="login-card hud-frame">
-    <div class="login-brand"><span class="dot"></span> Sentinel<span class="brand-ai">AI</span></div>
+<a href="#main" class="skip-link">Skip to content</a>
+{% include "partials/_icons.html" %}
+<div class="auth-page" id="main">
+  <a href="/" class="auth-brand">
+    <svg class="mark" aria-hidden="true"><use href="#i-shield"></use></svg>
+    Sentinel<span class="brand-accent" style="color:var(--cyan)">AI</span>
+  </a>
+  <div class="auth-card">
     {% block content %}{% endblock %}
-    <a href="/" class="back-link">← Back to overview</a>
   </div>
+  <a href="/" class="auth-back">← Back to home</a>
 </div>
 
+<div id="toast-region" aria-live="polite"></div>
+<script src="{{ url_for('static_files', filename='js/core/ui.js') }}"></script>
 <script src="{{ url_for('static_files', filename='js/api.js') }}"></script>
 {% block extra_scripts %}{% endblock %}
 </body>
