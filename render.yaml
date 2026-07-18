@@ -1,46 +1,49 @@
 # Render Blueprint -- see https://render.com/docs/blueprint-spec
-# Deploys: web service (gunicorn), celery worker, celery beat (single
-# instance, never scaled -- see docker-compose.yml's comment on the same
-# point), managed Postgres, managed Redis (Key Value).
 #
-# All three backend services share backend/Dockerfile (repo-root build
-# context, same as docker-compose.yml) so there's exactly one image
-# definition to keep in sync, not three.
-
-databases:
-  - name: sentinel-db
-    plan: starter
-    databaseName: sentinel
-    user: sentinel
+# FREE-TIER DEPLOY: a single free Web Service only. No Postgres, no Redis, no
+# Celery worker/beat -- those require paid Render plans (see render.full.yaml
+# for that config, preserved for when a paid upgrade makes sense).
+#
+# What this trades away, and why it's still safe to run:
+#   - No managed Postgres -> falls back to a local SQLite file
+#     (db_config.py's documented dev fallback). Render's free-tier disk is
+#     EPHEMERAL: the SQLite file is wiped on every restart/redeploy/scale-to-
+#     zero wake-up. Fine for a demo; do not rely on data surviving between
+#     sessions.
+#   - No Redis -> flask-limiter falls back to in-memory rate limiting
+#     (already coded for this, see app.py's comment on RATELIMIT_STORAGE_URI).
+#   - No Celery worker/beat -> no background Gmail auto-sync on a schedule,
+#     and POST /api/admin/retrain returns a 503 (job queue unreachable)
+#     instead of queuing -- both already handled gracefully in the code, not
+#     new failure modes. Gmail's manual "Scan Now" button still works: it
+#     calls sync.sync_connection() directly in the request, not through
+#     Celery.
+#   - SENTINEL_ENV is intentionally NOT "production": app.py refuses to boot
+#     in production mode without a real DATABASE_URL (db_config.py), and
+#     production mode would also disable the demo-account auto-seed that's
+#     the only way to get a login on a free instance with no shell access
+#     (free services don't support SSH -- see Render's dashboard copy).
+#     Leaving it as "development" is what makes admin/admin123 and
+#     user/user123 available immediately after first deploy.
 
 services:
-  - type: redis
-    name: sentinel-redis
-    plan: starter
-    ipAllowList: [] # only reachable from other services in this Render account
-
   - type: web
     name: sentinel-web
     runtime: docker
     dockerfilePath: backend/Dockerfile
     dockerContext: .
-    plan: starter
+    plan: free
     healthCheckPath: /healthz
     envVars:
       - key: SENTINEL_ENV
-        value: production
+        value: development
       - key: SENTINEL_SECRET_KEY
         generateValue: true
-      - key: DATABASE_URL
-        fromDatabase: { name: sentinel-db, property: connectionString }
-      - key: REDIS_URL
-        fromService: { name: sentinel-redis, type: redis, property: connectionString }
-      # --- Gmail OAuth (primary integration) -- see docs/GMAIL_SETUP.md ---
-      # Encrypts Gmail refresh tokens at rest. Generated here; the SAME value
-      # must be set on the worker/beat services (sync:false there) so all
-      # three can decrypt the same tokens.
       - key: TOKEN_ENCRYPTION_KEY
         generateValue: true
+      # --- Gmail OAuth (optional; leave unset to demo without it) ---
+      # See docs/GMAIL_SETUP.md. Without these, Connected Mailboxes just
+      # shows "Google OAuth is not configured" instead of erroring.
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -49,54 +52,13 @@ services:
         sync: false # https://<this-service>.onrender.com/api/admin/gmail/callback
       - key: GMAIL_MONITORING_MODE
         value: polling
-      - key: GMAIL_POLL_SECONDS
-        value: "60"
-      - key: GMAIL_MAX_MESSAGES_PER_SYNC
-        value: "100"
       - key: EML_MAX_BYTES
         value: "5242880"
-      # Optional Gmail push (Pub/Sub). Leave unset for polling-only. Prefer
-      # OIDC (AUDIENCE) over the shared token for production.
-      - key: GOOGLE_PUBSUB_TOPIC
-        sync: false
-      - key: GOOGLE_PUBSUB_AUDIENCE
-        sync: false
-      - key: GOOGLE_PUBSUB_SERVICE_ACCOUNT
-        sync: false
-      - key: GOOGLE_PUBSUB_VERIFICATION_TOKEN
-        sync: false
-      # Legacy IMAP off by default (Gmail is primary).
       - key: IMAP_ENABLED
         value: "false"
-      # Live-mailbox integration is opt-in: set MAILBOX_HOST/USERNAME/PASSWORD
-      # in the Render dashboard for this service if you want it connected to
-      # a real inbox (see backend/.env.example) -- left unset here since
-      # committing even placeholder mailbox creds to a blueprint is bad
-      # practice for something this sensitive.
-      #
-      # Required for retraining to actually reach this service: web,
-      # sentinel-celery-worker, and sentinel-celery-beat are separate
-      # Render services with separate disks (unlike docker-compose, which
-      # shares one Docker host) -- ml/artifact_store.py is what lets a
-      # model trained on the worker become visible here. Create a bucket
-      # with any S3-compatible provider (AWS S3, Cloudflare R2, Backblaze
-      # B2) and set the same four values on ALL THREE services below via
-      # the Render dashboard (sync: false = not committed here, set
-      # manually):
-      - key: ARTIFACT_STORE_BUCKET
-        sync: false
-      - key: ARTIFACT_STORE_ENDPOINT_URL
-        sync: false # omit/leave blank for real AWS S3; required for R2/B2
-      - key: ARTIFACT_STORE_ACCESS_KEY_ID
-        sync: false
-      - key: ARTIFACT_STORE_SECRET_ACCESS_KEY
-        sync: false
-      # Outbound email (signup verification, password reset, contact form
-      # -- backend/mail/email_client.py). Only sentinel-web sends email;
-      # worker/beat never call send_email(), so these don't need to be
-      # duplicated onto those two services. Leaving MAIL_HOST unset here
-      # is safe -- see email_client.py's dev-mode console fallback -- but
-      # means no real email goes out until it's configured.
+      # Outbound email (verification/reset/contact) -- unset is safe, see
+      # mail/email_client.py's dev-mode console fallback; no real email goes
+      # out until these are set.
       - key: MAIL_HOST
         sync: false
       - key: MAIL_PORT
@@ -108,86 +70,8 @@ services:
       - key: MAIL_FROM_ADDRESS
         sync: false
       - key: SENTINEL_PUBLIC_BASE_URL
-        sync: false # the real https://... URL of this deployment, used to build email links
+        sync: false # the real https://...onrender.com URL, used in emailed links
       - key: CONTACT_RECIPIENT_EMAIL
-        sync: false
-      # Optional error tracking (monitoring.py) -- unset means disabled,
-      # no account needed to deploy without it. Same DSN on all three
-      # services below if you do set one, so errors from web/worker/beat
-      # all land in one Sentry project.
-      - key: SENTRY_DSN
         sync: false
       - key: LOG_LEVEL
         value: INFO
-
-  - type: worker
-    name: sentinel-celery-worker
-    runtime: docker
-    dockerfilePath: backend/Dockerfile
-    dockerContext: .
-    # python -m celery, not the bare console-script -- see the matching
-    # comment in docker-compose.yml for why (ModuleNotFoundError: no
-    # module named 'app' otherwise).
-    dockerCommand: python -m celery -A celery_app worker --loglevel=info
-    plan: starter
-    envVars:
-      - key: SENTINEL_ENV
-        value: production
-      - key: SENTINEL_SECRET_KEY
-        sync: false # set to the same generated value as sentinel-web
-      - key: DATABASE_URL
-        fromDatabase: { name: sentinel-db, property: connectionString }
-      - key: REDIS_URL
-        fromService: { name: sentinel-redis, type: redis, property: connectionString }
-      - key: ARTIFACT_STORE_BUCKET
-        sync: false # same bucket as sentinel-web
-      - key: ARTIFACT_STORE_ENDPOINT_URL
-        sync: false
-      - key: ARTIFACT_STORE_ACCESS_KEY_ID
-        sync: false
-      - key: ARTIFACT_STORE_SECRET_ACCESS_KEY
-        sync: false
-      # Gmail: worker refreshes tokens + runs the sync, so it needs the SAME
-      # encryption key and OAuth client as sentinel-web.
-      - key: TOKEN_ENCRYPTION_KEY
-        sync: false # same generated value as sentinel-web
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: GMAIL_MAX_MESSAGES_PER_SYNC
-        value: "100"
-      - key: GOOGLE_PUBSUB_TOPIC
-        sync: false
-      - key: SENTRY_DSN
-        sync: false # same DSN as sentinel-web, if set
-
-  - type: worker
-    name: sentinel-celery-beat
-    runtime: docker
-    dockerfilePath: backend/Dockerfile
-    dockerContext: .
-    dockerCommand: python -m celery -A celery_app beat --loglevel=info
-    plan: starter
-    numInstances: 1 # exactly one -- see the beat comment in docker-compose.yml
-    envVars:
-      - key: SENTINEL_ENV
-        value: production
-      - key: SENTINEL_SECRET_KEY
-        sync: false # set to the same generated value as sentinel-web
-      - key: DATABASE_URL
-        fromDatabase: { name: sentinel-db, property: connectionString }
-      - key: REDIS_URL
-        fromService: { name: sentinel-redis, type: redis, property: connectionString }
-      # Beat runs the gmail-watch-renew task, which builds a Gmail service
-      # (token refresh) -- so it needs the same encryption key + OAuth client.
-      - key: TOKEN_ENCRYPTION_KEY
-        sync: false # same generated value as sentinel-web
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: GOOGLE_PUBSUB_TOPIC
-        sync: false
-      - key: SENTRY_DSN
-        sync: false # same DSN as sentinel-web, if set
