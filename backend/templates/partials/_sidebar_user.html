@@ -1,0 +1,29 @@
+{# User portal sidebar. `active_nav` marks the active link. #}
+<aside class="sidebar" id="appSidebar" aria-label="User navigation">
+  <a href="/app" class="brand">
+    <svg class="mark" aria-hidden="true"><use href="#i-shield"></use></svg>
+    Sentinel<span class="brand-accent">AI</span>
+  </a>
+
+  <nav class="side-group" aria-label="Portal">
+    <a href="/app" class="side-link {{ 'active' if active_nav == 'overview' }}">
+      <svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg> Overview</a>
+    <a href="/app/report" class="side-link {{ 'active' if active_nav == 'report' }}">
+      <svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg> Report Email</a>
+    <a href="/app/reports" class="side-link {{ 'active' if active_nav == 'reports' }}">
+      <svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg> My Reports</a>
+    <a href="/app/quick-analysis" class="side-link {{ 'active' if active_nav == 'quick' }}">
+      <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg> Quick Analysis</a>
+    <a href="/app/guide" class="side-link {{ 'active' if active_nav == 'guide' }}">
+      <svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg> Security Guide</a>
+  </nav>
+
+  <div class="side-foot">
+    <a href="/app/account" class="side-link {{ 'active' if active_nav == 'account' }}">
+      <svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg> Account</a>
+    <a href="/app/preferences" class="side-link {{ 'active' if active_nav == 'preferences' }}">
+      <svg class="icon" aria-hidden="true"><use href="#i-settings"></use></svg> Preferences</a>
+    <a href="#" class="side-link" data-signout>
+      <svg class="icon" aria-hidden="true"><use href="#i-signout"></use></svg> Sign out</a>
+  </div>
+</aside>

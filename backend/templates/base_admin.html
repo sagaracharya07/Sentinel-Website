@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" data-shell="admin">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Sentinel AI — Console{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/foundation.css') }}">
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/components.css') }}">
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/shells.css') }}">
+{% block extra_style %}{% endblock %}
+</head>
+<body class="app-body">
+<a href="#main" class="skip-link">Skip to content</a>
+{% include "partials/_icons.html" %}
+
+<div class="app-shell">
+  <div class="drawer-backdrop" id="sidebarBackdrop" data-close="#appSidebar" data-backdrop="#sidebarBackdrop"></div>
+  {% include "partials/_sidebar_admin.html" %}
+
+  <div class="app-main">
+    <header class="topbar">
+      <button class="sidebar-toggle" type="button" aria-label="Open navigation" data-toggle="#appSidebar" data-backdrop="#sidebarBackdrop">
+        <svg class="icon" aria-hidden="true"><use href="#i-menu"></use></svg>
+      </button>
+      <span class="page-title">{% block page_title %}{% endblock %}</span>
+      <div class="topbar-right">
+        <span class="protection-pill" id="protectionPill" hidden>
+          <span class="status-dot off" id="protectionDot"></span>
+          <span id="protectionText">Protection: —</span>
+        </span>
+        <a href="/admin/health" class="btn btn-ghost btn-sm" aria-label="System health">
+          <svg class="icon" aria-hidden="true"><use href="#i-server"></use></svg></a>
+        <span class="user-badge" id="userBadge"></span>
+      </div>
+    </header>
+
+    <main id="main" class="app-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<div id="toast-region" aria-live="polite"></div>
+<script src="{{ url_for('static_files', filename='js/core/ui.js') }}"></script>
+<script src="{{ url_for('static_files', filename='js/api.js') }}"></script>
+<script src="{{ url_for('static_files', filename='js/admin/common.js') }}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

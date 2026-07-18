@@ -142,11 +142,13 @@ from routes.gmail import gmail_bp  # noqa: E402
 from routes.reports import reports_bp  # noqa: E402
 from routes.detections import detections_bp  # noqa: E402
 from routes.pubsub import pubsub_bp  # noqa: E402
+from routes.pages import pages_bp  # noqa: E402
 
 app.register_blueprint(gmail_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(detections_bp)
 app.register_blueprint(pubsub_bp)
+app.register_blueprint(pages_bp)
 # The Pub/Sub webhook is called by Google, not a browser -- it authenticates
 # via a shared verification token, not a session/CSRF token, so it must be
 # exempt from CSRF (it would otherwise 400 on every push).
@@ -185,6 +187,93 @@ def set_security_headers(resp):
             "max-age=63072000; includeSubDomains"
         )
     return resp
+
+
+# ---------------------------------------------------------------------------
+# Branded error pages (frontend revamp). Browser requests get a styled,
+# self-contained error.html; API requests (path under /api/) keep the JSON
+# contract the front-end scripts expect. Never exposes stack traces/secrets.
+# ---------------------------------------------------------------------------
+_ERROR_META = {
+    400: (
+        "Bad request",
+        "The request couldn't be processed. If you were "
+        "submitting a form, its security token may have expired — reload the "
+        "page and try again.",
+        False,
+    ),
+    403: (
+        "Access denied",
+        "You don't have permission to view this page. If "
+        "you're an administrator, sign in with an administrator account.",
+        True,
+    ),
+    404: (
+        "Page not found",
+        "The page you're looking for doesn't exist or may have moved.",
+        False,
+    ),
+    429: (
+        "Too many requests",
+        "You've made too many requests in a short time. "
+        "Please wait a moment and try again.",
+        False,
+    ),
+    500: (
+        "Something went wrong",
+        "An unexpected error occurred on our side. "
+        "The issue has been logged and we're looking into it.",
+        False,
+    ),
+    503: (
+        "Service unavailable",
+        "Sentinel is temporarily unavailable. Please try again shortly.",
+        False,
+    ),
+}
+
+
+def _render_error(code):
+    title, message, show_signin = _ERROR_META.get(code, _ERROR_META[500])
+    if request.path.startswith("/api/"):
+        return jsonify({"error": title}), code
+    return render_template(
+        "error.html",
+        code=code,
+        title=title,
+        message=message,
+        show_signin=show_signin,
+    ), code
+
+
+@app.errorhandler(400)
+def err_400(e):
+    return _render_error(400)
+
+
+@app.errorhandler(403)
+def err_403(e):
+    return _render_error(403)
+
+
+@app.errorhandler(404)
+def err_404(e):
+    return _render_error(404)
+
+
+@app.errorhandler(429)
+def err_429(e):
+    return _render_error(429)
+
+
+@app.errorhandler(500)
+def err_500(e):
+    return _render_error(500)
+
+
+@app.errorhandler(503)
+def err_503(e):
+    return _render_error(503)
 
 
 # ---------------------------------------------------------------------------
@@ -296,7 +385,7 @@ def static_files(filename):
     full = os.path.join(STATIC_DIR, filename)
     if os.path.isfile(full):
         return send_from_directory(STATIC_DIR, filename)
-    return render_template("404.html"), 404
+    return _render_error(404)
 
 
 # ---------------------------------------------------------------------------

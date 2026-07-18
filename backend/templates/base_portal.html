@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" data-shell="portal">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Sentinel AI — Portal{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/foundation.css') }}">
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/components.css') }}">
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/shells.css') }}">
+{% block extra_style %}{% endblock %}
+</head>
+<body class="app-body">
+<a href="#main" class="skip-link">Skip to content</a>
+{% include "partials/_icons.html" %}
+
+<div class="app-shell">
+  <div class="drawer-backdrop" id="sidebarBackdrop" data-close="#appSidebar" data-backdrop="#sidebarBackdrop"></div>
+  {% include "partials/_sidebar_user.html" %}
+
+  <div class="app-main">
+    <header class="topbar">
+      <button class="sidebar-toggle" type="button" aria-label="Open navigation" data-toggle="#appSidebar" data-backdrop="#sidebarBackdrop">
+        <svg class="icon" aria-hidden="true"><use href="#i-menu"></use></svg>
+      </button>
+      <span class="page-title">{% block page_title %}{% endblock %}</span>
+      <div class="topbar-right">
+        <a href="/app/guide" class="btn btn-ghost btn-sm" aria-label="Help">
+          <svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg></a>
+        <span class="user-badge" id="userBadge"></span>
+      </div>
+    </header>
+
+    <main id="main" class="app-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<div id="toast-region" aria-live="polite"></div>
+<script src="{{ url_for('static_files', filename='js/core/ui.js') }}"></script>
+<script src="{{ url_for('static_files', filename='js/api.js') }}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,56 @@
+{# Public marketing navigation. `active_page` drives the active link. #}
+<nav class="pubnav" aria-label="Primary">
+  <div class="wrap">
+    <a href="/" class="brand" aria-label="Sentinel home">
+      <svg class="mark" aria-hidden="true"><use href="#i-shield"></use></svg>
+      Sentinel<span class="brand-accent">AI</span>
+    </a>
+    <div class="links">
+      <a href="/product"        class="{{ 'active' if active_page == 'product' }}">Product</a>
+      <a href="/how-it-works"   class="{{ 'active' if active_page == 'how-it-works' }}">How It Works</a>
+      <a href="/integrations"   class="{{ 'active' if active_page == 'integrations' }}">Integrations</a>
+      <a href="/demo"           class="{{ 'active' if active_page == 'demo' }}">Live Demo</a>
+      <a href="/threat-lab"     class="{{ 'active' if active_page == 'threat-lab' }}">Threat Lab</a>
+      <a href="/security"       class="{{ 'active' if active_page == 'security' }}">Security</a>
+      <a href="/about"          class="{{ 'active' if active_page == 'about' }}">About</a>
+    </div>
+    <div class="nav-cta">
+      {% if session.get('username') %}
+        <a href="{{ '/admin' if session.get('role') == 'admin' else '/app' }}" class="btn btn-ghost btn-sm">Open console</a>
+      {% else %}
+        <a href="/login" class="btn btn-ghost btn-sm">Sign in</a>
+        <a href="/login?next=/admin/mailboxes" class="btn btn-primary btn-sm">Connect Gmail</a>
+      {% endif %}
+    </div>
+    <button class="nav-toggle" type="button" aria-label="Open menu" data-toggle="#pubDrawer" data-backdrop="#pubDrawerBackdrop">
+      <svg class="icon" aria-hidden="true"><use href="#i-menu"></use></svg>
+    </button>
+  </div>
+</nav>
+
+{# Mobile drawer #}
+<div class="drawer-backdrop" id="pubDrawerBackdrop" data-close="#pubDrawer" data-backdrop="#pubDrawerBackdrop"></div>
+<aside class="drawer" id="pubDrawer" aria-hidden="true" aria-label="Menu">
+  <div class="drawer-head">
+    <span class="brand"><svg class="mark" aria-hidden="true"><use href="#i-shield"></use></svg> Sentinel<span class="brand-accent">AI</span></span>
+    <button class="nav-toggle" style="display:inline-flex" type="button" aria-label="Close menu" data-close="#pubDrawer" data-backdrop="#pubDrawerBackdrop">
+      <svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
+    </button>
+  </div>
+  <a href="/product">Product</a>
+  <a href="/how-it-works">How It Works</a>
+  <a href="/integrations">Integrations</a>
+  <a href="/demo">Live Demo</a>
+  <a href="/threat-lab">Threat Lab</a>
+  <a href="/security">Security &amp; Privacy</a>
+  <a href="/about">About</a>
+  <a href="/help">Help</a>
+  <div class="drawer-cta">
+    {% if session.get('username') %}
+      <a href="{{ '/admin' if session.get('role') == 'admin' else '/app' }}" class="btn btn-primary btn-block">Open console</a>
+    {% else %}
+      <a href="/login" class="btn btn-ghost btn-block">Sign in</a>
+      <a href="/login?next=/admin/mailboxes" class="btn btn-primary btn-block">Connect Gmail</a>
+    {% endif %}
+  </div>
+</aside>

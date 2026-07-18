@@ -1,0 +1,239 @@
+/* ==========================================================================
+   SENTINEL THREAT OPERATIONS — Components
+   Reusable UI primitives shared by public, portal and admin shells.
+   ========================================================================== */
+
+/* Default icon sizing (context rules below may override, e.g. buttons). An
+   inline <svg class="icon"><use href="#i-*"></svg> with no width would render
+   at the replaced-element default (huge), so give every icon a sane base. */
+.icon { width: 18px; height: 18px; flex: none; display: inline-block; vertical-align: middle; }
+
+/* ---- Buttons ------------------------------------------------------------ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  font-family: var(--font-body); font-weight: 600; font-size: var(--fs-sm);
+  padding: 10px 18px; border-radius: var(--radius-s);
+  border: 1px solid var(--border-strong); color: var(--text);
+  background: var(--panel-2);
+  transition: transform var(--dur-1) var(--ease), background var(--dur-1) var(--ease),
+              border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+  white-space: nowrap;
+}
+.btn:hover { text-decoration: none; background: var(--panel); border-color: var(--cyan); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled, .btn[aria-disabled="true"] { opacity: .5; pointer-events: none; }
+.btn .icon { width: 18px; height: 18px; }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--cyan), #35B4F0);
+  color: var(--text-on-accent); border-color: transparent;
+  box-shadow: 0 6px 20px var(--glow);
+}
+.btn-primary:hover { background: linear-gradient(135deg, var(--cyan-strong), var(--cyan)); color: var(--text-on-accent); }
+.btn-ghost { background: transparent; border-color: var(--border); color: var(--text-2); }
+.btn-ghost:hover { color: var(--text); border-color: var(--border-strong); background: rgba(140,170,220,.06); }
+.btn-danger { background: var(--red-wash); border-color: rgba(255,77,94,.5); color: #ffd0d5; }
+.btn-danger:hover { background: rgba(255,77,94,.22); border-color: var(--red); color: #fff; }
+.btn-success { background: var(--green-wash); border-color: rgba(34,211,166,.5); color: #bff3e5; }
+.btn-sm { padding: 7px 13px; font-size: var(--fs-xs); }
+.btn-lg { padding: 14px 26px; font-size: 1rem; }
+.btn-block { width: 100%; }
+
+/* ---- Cards & panels ----------------------------------------------------- */
+.card, .panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-1);
+}
+.card { padding: var(--sp-5); }
+.panel-head {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--border);
+}
+.panel-head h3 { font-size: 1.05rem; }
+.panel-body { padding: var(--sp-5); }
+.card-hover { transition: transform var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease); }
+.card-hover:hover { transform: translateY(-3px); border-color: var(--border-strong); box-shadow: var(--shadow-2); }
+
+/* ---- Metric card -------------------------------------------------------- */
+.metric {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-m);
+  padding: var(--sp-5);
+}
+.metric .metric-label {
+  font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.metric .metric-value { font-family: var(--font-display); font-size: 2rem; font-weight: 700; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.metric.is-threat .metric-value { color: var(--red); }
+.metric.is-review .metric-value { color: var(--amber); }
+.metric.is-safe   .metric-value { color: var(--green); }
+.metric.is-brand  .metric-value { color: var(--cyan); }
+.metric .metric-delta { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 4px; }
+
+/* ---- Badges (status = colour + icon + text) ----------------------------- */
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 600;
+  padding: 3px 10px; border-radius: var(--radius-pill);
+  border: 1px solid var(--border); background: var(--panel-2); color: var(--text-2);
+  line-height: 1.5;
+}
+.badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+.badge-legit  { color: var(--green); background: var(--green-wash); border-color: rgba(34,211,166,.35); }
+.badge-review { color: var(--amber); background: var(--amber-wash); border-color: rgba(255,176,32,.35); }
+.badge-phish  { color: var(--red);   background: var(--red-wash);   border-color: rgba(255,77,94,.35); }
+.badge-brand  { color: var(--cyan);  background: var(--cyan-wash);  border-color: rgba(76,201,255,.35); }
+.badge-muted  { color: var(--text-muted); }
+
+/* risk pills */
+.risk { font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .04em; }
+.risk-high { color: var(--red); }
+.risk-medium { color: var(--amber); }
+.risk-low { color: var(--green); }
+
+/* ---- Status dot (connection/health) ------------------------------------ */
+.status-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; box-shadow: 0 0 0 3px rgba(0,0,0,.25); }
+.status-dot.ok   { background: var(--green); }
+.status-dot.warn { background: var(--amber); }
+.status-dot.bad  { background: var(--red); }
+.status-dot.off  { background: var(--text-muted); }
+
+/* ---- Tables ------------------------------------------------------------- */
+.table-wrap { overflow-x: auto; border-radius: var(--radius-m); }
+table.data { font-size: var(--fs-sm); }
+table.data caption { text-align: left; color: var(--text-muted); font-size: var(--fs-xs); padding: 0 0 var(--sp-2); }
+table.data thead th {
+  text-align: left; font-family: var(--font-mono); font-size: var(--fs-xs);
+  text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted);
+  padding: 12px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; position: sticky; top: 0;
+  background: var(--panel);
+}
+table.data tbody td { padding: 13px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+table.data tbody tr { transition: background var(--dur-1) var(--ease); }
+table.data tbody tr:hover { background: var(--panel-inset); }
+table.data tbody tr.clickable { cursor: pointer; }
+table.data tbody tr:last-child td { border-bottom: none; }
+
+/* ---- Forms -------------------------------------------------------------- */
+.field { margin-bottom: var(--sp-4); }
+.field-label { display: block; font-family: var(--font-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+.input, input[type=text], input[type=email], input[type=password], input[type=search], textarea, select {
+  width: 100%; background: var(--panel-inset); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-s);
+  padding: 11px 13px; font-size: var(--fs-sm); transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+}
+.input:focus, input:focus, textarea:focus, select:focus { outline: none; border-color: var(--cyan); background: var(--bg-2); }
+textarea { min-height: 160px; resize: vertical; line-height: 1.55; }
+.field-error { color: var(--red); font-size: var(--fs-xs); font-family: var(--font-mono); margin-top: 6px; display: none; }
+.field-error.show { display: block; }
+.field-hint { color: var(--text-muted); font-size: var(--fs-xs); margin-top: 6px; }
+
+/* ---- States (loading / empty / error) ----------------------------------- */
+.state { text-align: center; padding: var(--sp-7) var(--sp-5); color: var(--text-muted); }
+.state .state-icon { width: 44px; height: 44px; margin: 0 auto var(--sp-3); opacity: .6; }
+.state .state-title { font-family: var(--font-display); font-weight: 700; color: var(--text-2); font-size: 1.05rem; }
+.state .state-msg { font-size: var(--fs-sm); margin-top: 6px; }
+.state-error .state-title { color: var(--red); }
+
+/* skeleton shimmer */
+.skeleton { position: relative; overflow: hidden; background: var(--panel-2); border-radius: var(--radius-s); }
+.skeleton::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(140,170,220,.10), transparent);
+  transform: translateX(-100%); animation: shimmer 1.4s infinite;
+}
+.skeleton.line { height: 12px; margin: 8px 0; }
+@keyframes shimmer { to { transform: translateX(100%); } }
+
+/* inline spinner */
+.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border-strong); border-top-color: var(--cyan); animation: spin .7s linear infinite; flex: none; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- Toast -------------------------------------------------------------- */
+#toast-region { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: var(--z-toast); display: flex; flex-direction: column; gap: 10px; align-items: center; pointer-events: none; }
+.toast {
+  pointer-events: auto; display: flex; align-items: center; gap: 10px;
+  background: var(--panel-2); border: 1px solid var(--border-strong); color: var(--text);
+  padding: 12px 18px; border-radius: var(--radius-pill); font-size: var(--fs-sm);
+  box-shadow: var(--shadow-pop); opacity: 0; transform: translateY(12px);
+  transition: opacity var(--dur-2) var(--ease), transform var(--dur-2) var(--ease);
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.ok   { border-color: rgba(34,211,166,.5); }
+.toast.err  { border-color: rgba(255,77,94,.5); }
+.toast .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.toast.ok .dot { background: var(--green); }
+.toast.err .dot { background: var(--red); }
+
+/* ---- Modal / dialog ----------------------------------------------------- */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: var(--z-modal); display: none;
+  align-items: center; justify-content: center; padding: var(--sp-5);
+  background: rgba(3, 7, 14, .72); backdrop-filter: blur(4px);
+}
+.modal-backdrop.show { display: flex; }
+.modal {
+  width: 100%; max-width: 640px; max-height: 86vh; overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--border-strong);
+  border-radius: var(--radius-l); box-shadow: var(--shadow-pop);
+}
+.modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-5); border-bottom: 1px solid var(--border); }
+.modal-body { padding: var(--sp-5); }
+.modal-close { color: var(--text-muted); font-size: 1.4rem; line-height: 1; padding: 2px 6px; border-radius: var(--radius-s); }
+.modal-close:hover { color: var(--text); background: var(--panel-2); }
+
+/* ---- Tabs / filter chips ------------------------------------------------ */
+.chips { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.chip {
+  font-family: var(--font-mono); font-size: var(--fs-xs); padding: 7px 14px;
+  border-radius: var(--radius-pill); border: 1px solid var(--border);
+  background: var(--panel); color: var(--text-muted);
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.chip:hover { color: var(--text-2); border-color: var(--border-strong); }
+.chip.active { background: var(--cyan-wash); color: var(--cyan); border-color: rgba(76,201,255,.5); font-weight: 700; }
+.chip .count { opacity: .8; }
+
+/* ---- Breadcrumbs -------------------------------------------------------- */
+.breadcrumbs { display: flex; gap: 8px; align-items: center; font-size: var(--fs-xs); font-family: var(--font-mono); color: var(--text-muted); }
+.breadcrumbs a { color: var(--text-muted); }
+.breadcrumbs a:hover { color: var(--cyan); }
+.breadcrumbs .sep { opacity: .5; }
+
+/* ---- Help callout ------------------------------------------------------- */
+.callout {
+  display: flex; gap: var(--sp-3); padding: var(--sp-4);
+  border: 1px solid var(--border); border-left: 3px solid var(--cyan);
+  background: var(--cyan-wash); border-radius: var(--radius-s); color: var(--text-2); font-size: var(--fs-sm);
+}
+.callout.warn { border-left-color: var(--amber); background: var(--amber-wash); }
+.callout .icon { width: 20px; height: 20px; color: var(--cyan); flex: none; }
+
+/* ---- Feature / finding cards -------------------------------------------- */
+.finding { display: flex; gap: var(--sp-3); padding: var(--sp-3) 0; border-bottom: 1px solid var(--border); }
+.finding:last-child { border-bottom: none; }
+.finding .sev { width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; flex: none; }
+.finding .sev.high { background: var(--red); }
+.finding .sev.medium { background: var(--amber); }
+.finding .sev.low { background: var(--text-muted); }
+.finding .f-title { font-weight: 600; font-size: var(--fs-sm); }
+.finding .f-evidence { font-size: var(--fs-xs); color: var(--text-muted); font-family: var(--font-mono); margin-top: 3px; word-break: break-word; }
+
+/* ---- Progress steps ----------------------------------------------------- */
+.steps { display: flex; flex-direction: column; gap: var(--sp-2); }
+.step { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-sm); color: var(--text-muted); }
+.step .step-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border-strong); flex: none; display: grid; place-items: center; font-size: 11px; }
+.step.done { color: var(--text); }
+.step.done .step-dot { border-color: var(--green); background: var(--green-wash); color: var(--green); }
+.step.active { color: var(--text); }
+.step.active .step-dot { border-color: var(--cyan); }
+.step.failed .step-dot { border-color: var(--red); color: var(--red); }
+
+/* ---- Pagination --------------------------------------------------------- */
+.pagination { display: flex; gap: 6px; align-items: center; justify-content: center; margin-top: var(--sp-5); }
+
+/* ---- Reveal-on-scroll (JS adds .in) ------------------------------------- */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out); }
+.reveal.in { opacity: 1; transform: none; }

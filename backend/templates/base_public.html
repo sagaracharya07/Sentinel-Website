@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" data-shell="public">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Sentinel AI — Gmail phishing detection &amp; response{% endblock %}</title>
+<meta name="description" content="{% block description %}Connect your organisation's Gmail, analyse incoming messages automatically, and investigate suspicious email from one security console.{% endblock %}">
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/foundation.css') }}">
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/components.css') }}">
+<link rel="stylesheet" href="{{ url_for('static_files', filename='css/shells.css') }}">
+{% block extra_style %}{% endblock %}
+</head>
+<body class="public-shell">
+<a href="#main" class="skip-link">Skip to content</a>
+{% include "partials/_icons.html" %}
+{% include "partials/_nav_public.html" %}
+
+<main id="main">
+{% block content %}{% endblock %}
+</main>
+
+{% include "partials/_footer_public.html" %}
+
+<div id="toast-region" aria-live="polite"></div>
+<script src="{{ url_for('static_files', filename='js/core/ui.js') }}"></script>
+<script src="{{ url_for('static_files', filename='js/core/reveal.js') }}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>
