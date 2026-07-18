@@ -29,6 +29,20 @@ os.environ.pop("MAILBOX_HOST", None)
 os.environ.pop("MAILBOX_USERNAME", None)
 os.environ.pop("MAILBOX_PASSWORD", None)
 
+# A test-only Fernet key so GmailConnection's encrypted-token methods work in
+# tests. Generated (guaranteed valid) rather than hardcoded -- it is NOT a
+# real secret and never persists; it only exercises the encrypt/decrypt
+# round-trip. Real deployments supply their own TOKEN_ENCRYPTION_KEY (see
+# backend/.env.example).
+if not os.environ.get("TOKEN_ENCRYPTION_KEY"):
+    from cryptography.fernet import Fernet
+
+    os.environ["TOKEN_ENCRYPTION_KEY"] = Fernet.generate_key().decode()
+# Ensure Gmail OAuth env is not accidentally inherited -- tests control
+# configuration explicitly via monkeypatch.
+for _k in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_OAUTH_REDIRECT_URI"):
+    os.environ.pop(_k, None)
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest

@@ -64,16 +64,42 @@ service healthy.
 | `admin` | `admin123` | admin | `/admin.html` — quarantine review, model info, retraining |
 | `user`  | `user123`  | user  | `/scan.html` — scan emails, submit feedback |
 
-## 3. Connecting a real mailbox (not copy-paste)
+## 3. Connecting a real mailbox
 
-The scanner works two ways now:
+**Gmail via Google OAuth is the primary integration.** An administrator
+connects a Gmail mailbox from the website (**Connected Mailboxes** →
+**Connect Gmail**); Sentinel stores an **encrypted refresh token** (never a
+password), creates its Gmail labels, and then automatically retrieves, fully
+parses (MIME, SPF/DKIM/DMARC, links, attachments), classifies, and labels
+incoming mail — **quarantine = add `Sentinel/Quarantine` + remove `INBOX`**
+(never a delete), **release = the reverse**. Monitoring is **polling by
+default** (Celery Beat → `tasks.gmail_sync_task`, incremental via the Gmail
+History API) with **optional Pub/Sub push**. Full setup:
+**[docs/GMAIL_SETUP.md](docs/GMAIL_SETUP.md)**; manual acceptance test:
+**[docs/GMAIL_ACCEPTANCE_TEST.md](docs/GMAIL_ACCEPTANCE_TEST.md)**.
 
-1. **Manual test scan** (`scan.html`) — paste an email in, get a verdict.
-   Text-only: only the sender/subject/body you paste are analysed — original
-   headers, SPF/DKIM/DMARC authentication results, embedded link
-   destinations, and attachments are not. Useful for testing specific
-   examples and for the feedback loop, but not the primary "production" path.
-2. **Live mailbox monitoring** — a Celery Beat job (`tasks.mailbox_sync_task`,
+Two secondary paths also exist:
+
+- **Employee `.eml` reporting** (`/report.html`) — a user uploads an original
+  message; it runs the **same full analysis pipeline** as Gmail mail and
+  creates a report an admin reviews (`/detections.html`).
+- **Quick Analysis** (`scan.html`) — paste sender/subject/body for a fast
+  text-only verdict (no headers/auth/links/attachments). Useful for testing
+  and the feedback loop, not a "production" path.
+
+### Legacy IMAP (dev/fallback, disabled by default)
+
+The older **IMAP-over-SSL** integration is retained as a tested legacy/dev
+fallback but is **off by default** — set `IMAP_ENABLED=true` (plus the
+`MAILBOX_*` env vars) to schedule its poller. It is not used when Gmail is
+connected, so the two never double-process the same mailbox. Sentinel does
+**not** claim Outlook/Yahoo/Microsoft 365 integration; the IMAP fallback can
+technically connect to any IMAP-over-SSL server with an app password, and
+Microsoft Graph OAuth is a possible **future** enhancement, not implemented.
+
+<details><summary>Legacy IMAP details</summary>
+
+   A Celery Beat job (`tasks.mailbox_sync_task`,
    `backend/celery_app.py`/`backend/tasks.py`) connects to a real mailbox
    over IMAP-over-SSL, pulls new mail automatically every
    `MAILBOX_POLL_SECONDS` (default 45s), classifies each message with the
@@ -137,6 +163,8 @@ says so plainly instead of pretending to be connected.
   (representing "the organisation's protected mailbox"), matching the
   proposal's own framing of the platform sitting in front of a mail server
   rather than inside every individual user's inbox.
+
+</details>
 
 ## 4. The ML model
 

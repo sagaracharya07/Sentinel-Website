@@ -35,6 +35,34 @@ services:
         fromDatabase: { name: sentinel-db, property: connectionString }
       - key: REDIS_URL
         fromService: { name: sentinel-redis, type: redis, property: connectionString }
+      # --- Gmail OAuth (primary integration) -- see docs/GMAIL_SETUP.md ---
+      # Encrypts Gmail refresh tokens at rest. Generated here; the SAME value
+      # must be set on the worker/beat services (sync:false there) so all
+      # three can decrypt the same tokens.
+      - key: TOKEN_ENCRYPTION_KEY
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_OAUTH_REDIRECT_URI
+        sync: false # https://<this-service>.onrender.com/api/admin/gmail/callback
+      - key: GMAIL_MONITORING_MODE
+        value: polling
+      - key: GMAIL_POLL_SECONDS
+        value: "60"
+      - key: GMAIL_MAX_MESSAGES_PER_SYNC
+        value: "100"
+      - key: EML_MAX_BYTES
+        value: "5242880"
+      # Optional Gmail push (Pub/Sub). Leave unset for polling-only.
+      - key: GOOGLE_PUBSUB_TOPIC
+        sync: false
+      - key: GOOGLE_PUBSUB_VERIFICATION_TOKEN
+        sync: false
+      # Legacy IMAP off by default (Gmail is primary).
+      - key: IMAP_ENABLED
+        value: "false"
       # Live-mailbox integration is opt-in: set MAILBOX_HOST/USERNAME/PASSWORD
       # in the Render dashboard for this service if you want it connected to
       # a real inbox (see backend/.env.example) -- left unset here since
@@ -114,6 +142,18 @@ services:
         sync: false
       - key: ARTIFACT_STORE_SECRET_ACCESS_KEY
         sync: false
+      # Gmail: worker refreshes tokens + runs the sync, so it needs the SAME
+      # encryption key and OAuth client as sentinel-web.
+      - key: TOKEN_ENCRYPTION_KEY
+        sync: false # same generated value as sentinel-web
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_MAX_MESSAGES_PER_SYNC
+        value: "100"
+      - key: GOOGLE_PUBSUB_TOPIC
+        sync: false
       - key: SENTRY_DSN
         sync: false # same DSN as sentinel-web, if set
 
@@ -134,5 +174,15 @@ services:
         fromDatabase: { name: sentinel-db, property: connectionString }
       - key: REDIS_URL
         fromService: { name: sentinel-redis, type: redis, property: connectionString }
+      # Beat runs the gmail-watch-renew task, which builds a Gmail service
+      # (token refresh) -- so it needs the same encryption key + OAuth client.
+      - key: TOKEN_ENCRYPTION_KEY
+        sync: false # same generated value as sentinel-web
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_PUBSUB_TOPIC
+        sync: false
       - key: SENTRY_DSN
         sync: false # same DSN as sentinel-web, if set

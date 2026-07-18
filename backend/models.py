@@ -10,6 +10,8 @@ status, model_version, audit trail, feedback history, model versioning).
 
 import json
 from datetime import datetime, timezone
+
+import crypto
 from extensions import db
 
 
@@ -85,17 +87,38 @@ class Scan(db.Model):
     created_by = db.Column(db.String(80), default="system")
 
     # --- real mailbox integration ---
-    source = db.Column(db.String(20), default="manual")  # 'manual' | 'mailbox'
+    # source: 'manual' (Quick Analysis) | 'mailbox' (legacy IMAP) |
+    #         'gmail' (connected Gmail mailbox) | 'upload' (.eml, added in CP4)
+    source = db.Column(db.String(20), default="manual")
     mailbox_uid = db.Column(
         db.String(50)
     )  # IMAP UID, unique within a folder (see partial index below)
     mailbox_message_id = db.Column(
         db.String(255)
     )  # RFC Message-ID, stable across folders/moves
-    mailbox_action = db.Column(db.String(20))  # 'none' | 'quarantined' | 'flagged'
+    # mailbox_action semantics differ by source: IMAP uses 'quarantined'/
+    # 'flagged' (folder move / flag); Gmail uses 'quarantined'/'needs_review'/
+    # 'processed'/'scan_failed'/'none' (label operations -- see
+    # integrations/gmail/messages.py).
+    mailbox_action = db.Column(
+        db.String(20)
+    )  # 'none' | 'quarantined' | 'flagged' | ...
     mailbox_action_error = db.Column(
         db.Text
     )  # set if the real mailbox move/flag failed
+
+    # --- connected Gmail mailbox (source='gmail') ---
+    # Plain indexed integer, not a DB-level ForeignKey, on purpose: it points
+    # at gmail_connections.id but SQLite can't ADD a FK column without
+    # rebuilding the whole table (which would jeopardise the partial unique
+    # indexes above). Referential use is by explicit filter, same as the IMAP
+    # side, which likewise doesn't FK into mailbox_status.
+    gmail_connection_id = db.Column(db.Integer, index=True)
+    gmail_message_id = db.Column(
+        db.String(120)
+    )  # Gmail's message id (stable per mailbox)
+    gmail_thread_id = db.Column(db.String(120))
+    gmail_history_id = db.Column(db.String(50))
 
     __table_args__ = (
         # Backstop against double-processing the same mailbox message --
@@ -118,6 +141,22 @@ class Scan(db.Model):
             unique=True,
             sqlite_where=db.text("source = 'mailbox' AND mailbox_uid IS NOT NULL"),
             postgresql_where=db.text("source = 'mailbox' AND mailbox_uid IS NOT NULL"),
+        ),
+        # Gmail dedup backstop: no duplicate Scan row for the same Gmail
+        # message within one connection, even if the sync lock is ever
+        # bypassed (mirrors the IMAP-UID index above). Keyed on
+        # (gmail_connection_id, gmail_message_id) because Gmail message ids
+        # are only unique within a single mailbox. Partial so non-Gmail rows
+        # (NULL gmail_message_id) never collide.
+        db.Index(
+            "uq_scans_gmail_message",
+            "gmail_connection_id",
+            "gmail_message_id",
+            unique=True,
+            sqlite_where=db.text("source = 'gmail' AND gmail_message_id IS NOT NULL"),
+            postgresql_where=db.text(
+                "source = 'gmail' AND gmail_message_id IS NOT NULL"
+            ),
         ),
     )
 
@@ -180,6 +219,9 @@ class Scan(db.Model):
             "mailbox_action": self.mailbox_action,
             "mailbox_action_error": self.mailbox_action_error,
             "mailbox_message_id": self.mailbox_message_id,
+            "gmail_connection_id": self.gmail_connection_id,
+            "gmail_message_id": self.gmail_message_id,
+            "gmail_thread_id": self.gmail_thread_id,
         }
 
 
@@ -279,6 +321,199 @@ class MailboxStatus(db.Model):
             "quarantine_folder": self.quarantine_folder,
             "sync_in_progress": self.sync_in_progress,
         }
+
+
+# Connection lifecycle states for a Gmail mailbox. Kept as module-level
+# constants so routes/tasks/tests all reference one spelling.
+GMAIL_STATUS_CONNECTED = "connected"
+GMAIL_STATUS_PAUSED = "paused"
+GMAIL_STATUS_DISCONNECTED = "disconnected"
+GMAIL_STATUS_ERROR = "error"
+GMAIL_STATUS_REVOKED = "revoked"
+
+
+class GmailConnection(db.Model):
+    """
+    One connected Gmail mailbox, authorised via Google OAuth. Replaces the
+    env-var IMAP app-password model for the primary integration: the
+    administrator connects a mailbox from the website and Sentinel stores an
+    *encrypted* refresh token (never a password) to keep access.
+
+    Scope note: this prototype supports one active Gmail connection per
+    deployment (see active()). Rows for previously-connected mailboxes are
+    kept with status='disconnected' for audit history rather than deleted.
+    Tokens are stored encrypted (see crypto.py) and are NEVER exposed via
+    to_dict()/to_public(), templates, APIs, or logs.
+    """
+
+    __tablename__ = "gmail_connections"
+
+    id = db.Column(db.Integer, primary_key=True)
+    # The administrator who connected this mailbox (mailbox management is
+    # admin-only -- see routes/gmail.py).
+    owner_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id"), nullable=True, index=True
+    )
+    provider = db.Column(db.String(20), nullable=False, default="gmail")
+    mailbox_email = db.Column(db.String(255), index=True)
+    provider_account_id = db.Column(db.String(255))  # Google 'sub' -- stable id
+
+    # Encrypted at rest (crypto.encrypt). The access token is short-lived
+    # and mostly re-derived from the refresh token, but caching it avoids a
+    # refresh round-trip on every call within its ~1h validity window.
+    encrypted_refresh_token = db.Column(db.Text)
+    encrypted_access_token = db.Column(db.Text)
+    token_expiry = db.Column(db.DateTime)
+    granted_scopes = db.Column(db.Text)  # space-separated scope list
+
+    connection_status = db.Column(
+        db.String(20), nullable=False, default=GMAIL_STATUS_CONNECTED, index=True
+    )
+    protection_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    monitoring_mode = db.Column(db.String(20), default="polling")  # polling|push
+
+    last_successful_sync_at = db.Column(db.DateTime)
+    last_attempted_sync_at = db.Column(db.DateTime)
+    last_history_id = db.Column(db.String(50))
+    last_watch_expiration = db.Column(db.DateTime)
+    last_error_code = db.Column(db.String(60))
+    last_error_message = db.Column(db.Text)
+
+    # Gmail label IDs discovered/created for this mailbox (Phase 3 / CP2).
+    processed_label_id = db.Column(db.String(120))
+    needs_review_label_id = db.Column(db.String(120))
+    quarantine_label_id = db.Column(db.String(120))
+    scan_failed_label_id = db.Column(db.String(120))
+
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
+    disconnected_at = db.Column(db.DateTime)
+
+    # DB-backed sync lock (same compare-and-set pattern as MailboxStatus for
+    # IMAP): stops the Celery-Beat poll and a manual "Scan now" from running
+    # concurrently against the same mailbox. A stale lock (holder crashed) is
+    # taken over after a timeout instead of deadlocking forever.
+    sync_in_progress = db.Column(db.Boolean, nullable=False, default=False)
+    sync_lock_acquired_at = db.Column(db.DateTime)
+
+    @classmethod
+    def active(cls):
+        """The single non-disconnected connection, if any. There is at most
+        one at a time by construction (the connect flow disconnects any
+        prior active mailbox before storing a new one)."""
+        return cls.query.filter(
+            cls.connection_status != GMAIL_STATUS_DISCONNECTED
+        ).first()
+
+    # --- token accessors (encryption boundary lives here, not in routes) ---
+    def set_refresh_token(self, token: str):
+        self.encrypted_refresh_token = crypto.encrypt(token) if token else None
+
+    def get_refresh_token(self):
+        if not self.encrypted_refresh_token:
+            return None
+        return crypto.decrypt(self.encrypted_refresh_token)
+
+    def set_access_token(self, token: str):
+        self.encrypted_access_token = crypto.encrypt(token) if token else None
+
+    def get_access_token(self):
+        if not self.encrypted_access_token:
+            return None
+        return crypto.decrypt(self.encrypted_access_token)
+
+    def mark_disconnected(self):
+        """Clear credentials and flag the row disconnected. Encrypted tokens
+        are wiped so a disconnect genuinely revokes stored access rather
+        than just hiding it behind a status flag."""
+        self.connection_status = GMAIL_STATUS_DISCONNECTED
+        self.protection_enabled = False
+        self.encrypted_refresh_token = None
+        self.encrypted_access_token = None
+        self.token_expiry = None
+        self.disconnected_at = utcnow()
+
+    def to_dict(self):
+        """Admin-facing status. Deliberately omits every token field and the
+        provider_account_id -- nothing here is a secret an admin console
+        shouldn't show, and nothing here is a credential."""
+        return {
+            "id": self.id,
+            "provider": self.provider,
+            "mailbox_email": self.mailbox_email,
+            "connection_status": self.connection_status,
+            "protection_enabled": self.protection_enabled,
+            "monitoring_mode": self.monitoring_mode,
+            "granted_scopes": (self.granted_scopes or "").split()
+            if self.granted_scopes
+            else [],
+            "last_successful_sync_at": self.last_successful_sync_at.isoformat()
+            if self.last_successful_sync_at
+            else None,
+            "last_attempted_sync_at": self.last_attempted_sync_at.isoformat()
+            if self.last_attempted_sync_at
+            else None,
+            "last_error_code": self.last_error_code,
+            "last_error_message": self.last_error_message,
+            "labels_ready": all(
+                [
+                    self.processed_label_id,
+                    self.needs_review_label_id,
+                    self.quarantine_label_id,
+                    self.scan_failed_label_id,
+                ]
+            ),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "disconnected_at": self.disconnected_at.isoformat()
+            if self.disconnected_at
+            else None,
+        }
+
+
+class EmailReport(db.Model):
+    """
+    An employee-submitted `.eml` report (Phase 11). The uploaded file is
+    analysed through the same pipeline as Gmail mail -- the result is stored
+    as a Scan row (source='upload', linked via scan_id) -- and this row adds
+    the user-report lifecycle on top: who submitted it, its review status,
+    and the administrator's final verdict.
+
+    Ownership is enforced everywhere: a normal user sees only their own
+    reports; only administrators review them.
+    """
+
+    __tablename__ = "email_reports"
+    id = db.Column(db.Integer, primary_key=True)
+    reporter_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id"), nullable=False, index=True
+    )
+    reporter_username = db.Column(db.String(80))  # denormalised for display
+    filename = db.Column(db.String(255))  # sanitised original filename
+    stored_path = db.Column(db.String(500))  # on-disk path, outside static
+    scan_id = db.Column(db.String(20), db.ForeignKey("scans.scan_id"))
+    status = db.Column(
+        db.String(20), nullable=False, default="pending", index=True
+    )  # pending | reviewed
+    admin_verdict = db.Column(db.String(20))  # Phishing | Legitimate | None
+    reviewed_by = db.Column(db.String(80))
+    reviewed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=utcnow)
+
+    def to_dict(self, scan=None):
+        d = {
+            "id": self.id,
+            "reporter_username": self.reporter_username,
+            "filename": self.filename,
+            "scan_id": self.scan_id,
+            "status": self.status,
+            "admin_verdict": self.admin_verdict,
+            "reviewed_by": self.reviewed_by,
+            "reviewed_at": self.reviewed_at.isoformat() if self.reviewed_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+        if scan is not None:
+            d["scan"] = scan.to_dict()
+        return d
 
 
 class AuditLog(db.Model):

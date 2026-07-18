@@ -35,13 +35,10 @@ from flask import (
     redirect,
     render_template,
 )
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from flask_wtf import CSRFProtect
 from flask_wtf.csrf import generate_csrf
 from werkzeug.security import generate_password_hash
 
-from extensions import db
+from extensions import db, csrf, limiter
 from models import Scan, Feedback, ModelVersion, AuditLog, User, MailboxStatus
 from auth import (
     verify_login,
@@ -110,8 +107,18 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = IS_PRODUCTION
 
-db.init_app(app)
+# Rate limiting -- shared via Redis (same instance Celery uses) so limits
+# apply across all web replicas instead of being tracked per-process, which
+# would let an attacker bypass the limit just by landing on a different
+# instance. Falls back to in-memory storage if REDIS_URL isn't set (local
+# dev without Redis running), with a warning from flask-limiter itself.
+_redis_url = os.environ.get("REDIS_URL")
+if _redis_url:
+    app.config["RATELIMIT_STORAGE_URI"] = _redis_url
 
+# Extensions are constructed unbound in extensions.py (so blueprints can
+# import them without importing app.py) and bound here via init_app().
+#
 # CSRF protection -- the session cookie is the only thing authenticating
 # API requests (see site/js/api.js: `credentials: 'same-origin'`, no
 # bearer token), which makes every state-changing (POST/PUT/PATCH/DELETE)
@@ -122,19 +129,28 @@ db.init_app(app)
 # POST route uniformly rather than a hand-picked subset. The frontend
 # fetches a token from GET /api/csrf-token (below) and sends it back as
 # the X-CSRFToken header -- see site/js/api.js's request().
-csrf = CSRFProtect(app)
+db.init_app(app)
+csrf.init_app(app)
+limiter.init_app(app)
 
-# Rate limiting -- shared via Redis (same instance Celery uses) so limits
-# apply across all web replicas instead of being tracked per-process, which
-# would let an attacker bypass the limit just by landing on a different
-# instance. Falls back to in-memory storage if REDIS_URL isn't set (local
-# dev without Redis running), with a warning from flask-limiter itself.
-limiter = Limiter(
-    get_remote_address,
-    app=app,
-    default_limits=[],
-    storage_uri=os.environ.get("REDIS_URL"),
-)
+# Gmail OAuth / connected-mailbox routes live in a blueprint (routes/gmail.py)
+# rather than inline here -- the Gmail integration adds enough endpoints that
+# piling them into this already-large module would be unmaintainable. The
+# blueprint imports only shared extensions/auth/models, never app.py, so this
+# registration is import-cycle-free.
+from routes.gmail import gmail_bp  # noqa: E402
+from routes.reports import reports_bp  # noqa: E402
+from routes.detections import detections_bp  # noqa: E402
+from routes.pubsub import pubsub_bp  # noqa: E402
+
+app.register_blueprint(gmail_bp)
+app.register_blueprint(reports_bp)
+app.register_blueprint(detections_bp)
+app.register_blueprint(pubsub_bp)
+# The Pub/Sub webhook is called by Google, not a browser -- it authenticates
+# via a shared verification token, not a session/CSRF token, so it must be
+# exempt from CSRF (it would otherwise 400 on every push).
+csrf.exempt(pubsub_bp)
 
 RETENTION_HOURS = 24  # FR-DB-05 / NFR-Security: don't keep raw bodies indefinitely
 
@@ -187,6 +203,9 @@ TEMPLATE_PAGES = {
     "reset-password.html": {},
     "scan.html": {"active_page": "scan"},
     "admin.html": {"active_page": "admin"},
+    "mailboxes.html": {"active_page": "admin"},
+    "detections.html": {"active_page": "admin"},
+    "report.html": {"active_page": "scan"},
     "account.html": {"active_page": "account"},
     "features.html": {"active_page": "features"},
     "how-it-works.html": {"active_page": "how-it-works"},

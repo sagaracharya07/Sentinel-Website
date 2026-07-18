@@ -41,6 +41,32 @@ def mailbox_sync_task():
         return result
 
 
+@celery_app.task(name="tasks.gmail_sync_task")
+def gmail_sync_task():
+    """Incremental sync of the active Gmail connection. Idempotent and
+    self-locking (see integrations/gmail/sync.py) -- safe to run on a Beat
+    schedule alongside a manual 'Scan now'. Returns a summary dict; never
+    raises (failures are captured onto the connection)."""
+    with _app_context():
+        from integrations.gmail.sync import run_active_sync
+        from auth import log_action
+
+        result = run_active_sync(log_action=log_action)
+        if result.get("error"):
+            logger.warning("gmail_sync_task: %s", result["error"])
+        return result
+
+
+@celery_app.task(name="tasks.gmail_watch_renew_task")
+def gmail_watch_renew_task():
+    """Re-arm the Gmail push watch before its 7-day expiry. No-op when push
+    isn't configured or the active mailbox uses polling."""
+    with _app_context():
+        from integrations.gmail.watch import renew_active_watch
+
+        return renew_active_watch()
+
+
 @celery_app.task(name="tasks.retrain_task", bind=True)
 def retrain_task(self, actor: str):
     """
