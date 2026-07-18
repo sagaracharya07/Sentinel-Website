@@ -283,38 +283,40 @@ def err_503(e):
 
 
 # ---------------------------------------------------------------------------
-# Front-end: HTML pages are Jinja2 templates (backend/templates/) sharing
-# base_marketing.html/base_app.html/base_auth.html for nav/footer instead
-# of each page hand-duplicating that markup (see the plan doc -- this
-# became untenable once the site grew past ~4 pages). CSS/JS/images stay
-# static files served from site/, unchanged. `active_page` just drives
-# which nav link gets the .active class in the base templates.
-# ---------------------------------------------------------------------------
-TEMPLATE_PAGES = {
-    "index.html": {"active_page": "home"},
-    "login.html": {},
-    "signup.html": {},
-    "forgot-password.html": {},
-    "reset-password.html": {},
-    "scan.html": {"active_page": "scan"},
-    "admin.html": {"active_page": "admin"},
-    "mailboxes.html": {"active_page": "admin"},
-    "detections.html": {"active_page": "admin"},
-    "report.html": {"active_page": "scan"},
-    "account.html": {"active_page": "account"},
-    "features.html": {"active_page": "features"},
-    "how-it-works.html": {"active_page": "how-it-works"},
-    "pricing.html": {"active_page": "pricing"},
-    "about.html": {"active_page": "about"},
-    "contact.html": {"active_page": "contact"},
-    "faq.html": {},
-    "privacy.html": {},
-    "terms.html": {},
-    "integrations.html": {},
-    "changelog.html": {},
-    "security.html": {},
-    "resources.html": {},
-    "status.html": {},
+# Front-end: HTML pages are Jinja2 templates rendered via routes/pages.py's
+# clean URLs (frontend revamp, Checkpoint 1-5). The old `TEMPLATE_PAGES`
+# catch-all mapping (one dict entry per *.html file, shared base_marketing.html
+# /base_app.html shells) is gone now that every one of those pages has a
+# replacement -- see the frontend-revamp direction's "old *.html filenames are
+# retired via redirects so no in-flight links break". login.html/signup.html/
+# forgot-password.html/reset-password.html are the exception: those filenames
+# were rewritten in place (same file, new content) rather than superseded by a
+# new file, so they still render directly and don't need a redirect entry.
+_LEGACY_REDIRECTS = {
+    "index.html": "/",
+    "features.html": "/product",
+    "how-it-works.html": "/how-it-works",
+    "integrations.html": "/integrations",
+    "about.html": "/about",
+    "security.html": "/security",
+    "contact.html": "/contact",
+    "faq.html": "/faq",
+    "terms.html": "/terms",
+    "privacy.html": "/privacy",
+    "account.html": "/app/account",
+    "report.html": "/app/report",
+    "scan.html": "/app/quick-analysis",
+    "admin.html": "/admin",
+    "detections.html": "/admin/detections",
+    "mailboxes.html": "/admin/mailboxes",
+    # No replacement in the new sitemap (no billing/changelog/resources/status
+    # pages were part of the approved direction) -- redirect home rather than
+    # 404 a link someone may still have bookmarked.
+    "pricing.html": "/",
+    "changelog.html": "/",
+    "resources.html": "/",
+    "status.html": "/",
+    "404.html": "/",
 }
 
 
@@ -386,8 +388,8 @@ def root():
 def static_files(filename):
     if filename.startswith("api/"):
         return jsonify({"error": "not found"}), 404
-    if filename in TEMPLATE_PAGES:
-        return render_template(filename, **TEMPLATE_PAGES[filename])
+    if filename in _LEGACY_REDIRECTS:
+        return redirect(_LEGACY_REDIRECTS[filename], code=301)
     full = os.path.join(STATIC_DIR, filename)
     if os.path.isfile(full):
         return send_from_directory(STATIC_DIR, filename)
