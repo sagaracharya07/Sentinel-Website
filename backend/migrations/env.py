@@ -30,6 +30,12 @@ target_metadata = db.metadata
 # instead of the static placeholder alembic.ini ships with.
 _backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _instance_dir = os.path.join(_backend_dir, "instance")
+# app.py creates this directory too, but Alembic runs BEFORE app.py is ever
+# imported (see the Dockerfile's CMD chain: `alembic upgrade head && python
+# seed_startup.py && gunicorn ...`) -- on a brand new container with no prior
+# instance/ directory, SQLite's "unable to open database file" isn't a
+# permissions problem, it's a missing-directory problem.
+os.makedirs(_instance_dir, exist_ok=True)
 _is_production = (
     os.environ.get("SENTINEL_ENV", "development").strip().lower() == "production"
 )
