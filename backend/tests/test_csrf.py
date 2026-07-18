@@ -4,6 +4,7 @@ flow (fetch a token, then send it back) rather than relying on the other
 test modules, which deliberately disable WTF_CSRF_ENABLED (see
 conftest.py) to keep unrelated tests simple.
 """
+
 import re
 
 

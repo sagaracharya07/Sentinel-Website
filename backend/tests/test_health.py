@@ -1,4 +1,5 @@
 """Tests for the /healthz (liveness) and /readyz (readiness) endpoints."""
+
 from unittest.mock import patch
 
 
@@ -25,7 +26,9 @@ def test_readyz_ok_when_database_reachable(client):
 
 
 def test_readyz_reports_database_failure(client):
-    with patch("extensions.db.session.execute", side_effect=Exception("connection refused")):
+    with patch(
+        "extensions.db.session.execute", side_effect=Exception("connection refused")
+    ):
         resp = client.get("/readyz")
     assert resp.status_code == 503
     body = resp.get_json()
@@ -38,7 +41,9 @@ def test_readyz_reports_redis_not_configured_by_default(client):
     assert resp.get_json()["checks"]["redis"] == "not configured"
 
 
-def test_readyz_reports_redis_failure_when_configured_but_unreachable(client, monkeypatch):
+def test_readyz_reports_redis_failure_when_configured_but_unreachable(
+    client, monkeypatch
+):
     monkeypatch.setenv("REDIS_URL", "redis://localhost:1/0")  # nothing listens here
     resp = client.get("/readyz")
     assert resp.status_code == 503

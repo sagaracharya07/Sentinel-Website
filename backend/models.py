@@ -7,6 +7,7 @@ scan_timestamp, risk_level, user_feedback, notes -- extended with the
 extra columns a working system actually needs (sender, findings,
 status, model_version, audit trail, feedback history, model versioning).
 """
+
 import json
 from datetime import datetime, timezone
 from extensions import db
@@ -36,36 +37,47 @@ class User(db.Model):
 
     def to_public(self):
         return {
-            "username": self.username, "role": self.role,
-            "email": self.email, "email_verified": self.email_verified,
+            "username": self.username,
+            "role": self.role,
+            "email": self.email,
+            "email_verified": self.email_verified,
         }
 
 
 class Scan(db.Model):
     """One row per FR-DB-01: 'classification results for each analysed email'."""
+
     __tablename__ = "scans"
     scan_id = db.Column(db.String(20), primary_key=True)
 
     sender = db.Column(db.String(255))
     subject = db.Column(db.String(500))
-    body = db.Column(db.Text)                 # redacted after retention window (FR-DB-05)
+    body = db.Column(db.Text)  # redacted after retention window (FR-DB-05)
     body_purged = db.Column(db.Boolean, default=False)
 
-    classification = db.Column(db.String(20))       # 'Phishing' | 'Needs Review' | 'Legitimate'
-    confidence_score = db.Column(db.Float)           # FR-DB-03 -- despite the name, this is actually the
-                                                      # phishing probability (see phishing_probability below);
-                                                      # kept under its original name for backward compatibility
-                                                      # with existing rows/consumers rather than renamed in place.
-    prediction_confidence = db.Column(db.Float)      # how sure the model is of *whichever* label it picked --
-                                                      # max(phishing_probability, 1 - phishing_probability).
-                                                      # Nullable: old rows predate this column (see to_dict()).
-    score = db.Column(db.Integer)                    # 0-100 raw model score
-    risk_level = db.Column(db.String(10))            # Low | Medium | High
-    findings_json = db.Column(db.Text)               # explainability payload
+    classification = db.Column(
+        db.String(20)
+    )  # 'Phishing' | 'Needs Review' | 'Legitimate'
+    confidence_score = db.Column(
+        db.Float
+    )  # FR-DB-03 -- despite the name, this is actually the
+    # phishing probability (see phishing_probability below);
+    # kept under its original name for backward compatibility
+    # with existing rows/consumers rather than renamed in place.
+    prediction_confidence = db.Column(
+        db.Float
+    )  # how sure the model is of *whichever* label it picked --
+    # max(phishing_probability, 1 - phishing_probability).
+    # Nullable: old rows predate this column (see to_dict()).
+    score = db.Column(db.Integer)  # 0-100 raw model score
+    risk_level = db.Column(db.String(10))  # Low | Medium | High
+    findings_json = db.Column(db.Text)  # explainability payload
     highlights_json = db.Column(db.Text)
 
-    status = db.Column(db.String(20), default="Delivered")  # Delivered|Flagged|Quarantined
-    user_feedback = db.Column(db.String(20))          # corrected label, if any
+    status = db.Column(
+        db.String(20), default="Delivered"
+    )  # Delivered|Flagged|Quarantined
+    user_feedback = db.Column(db.String(20))  # corrected label, if any
     notes = db.Column(db.Text, default="")
 
     scan_timestamp = db.Column(db.DateTime, default=utcnow)  # FR-DB-02
@@ -73,11 +85,17 @@ class Scan(db.Model):
     created_by = db.Column(db.String(80), default="system")
 
     # --- real mailbox integration ---
-    source = db.Column(db.String(20), default="manual")   # 'manual' | 'mailbox'
-    mailbox_uid = db.Column(db.String(50))                 # IMAP UID, unique within a folder (see partial index below)
-    mailbox_message_id = db.Column(db.String(255))         # RFC Message-ID, stable across folders/moves
-    mailbox_action = db.Column(db.String(20))              # 'none' | 'quarantined' | 'flagged'
-    mailbox_action_error = db.Column(db.Text)              # set if the real mailbox move/flag failed
+    source = db.Column(db.String(20), default="manual")  # 'manual' | 'mailbox'
+    mailbox_uid = db.Column(
+        db.String(50)
+    )  # IMAP UID, unique within a folder (see partial index below)
+    mailbox_message_id = db.Column(
+        db.String(255)
+    )  # RFC Message-ID, stable across folders/moves
+    mailbox_action = db.Column(db.String(20))  # 'none' | 'quarantined' | 'flagged'
+    mailbox_action_error = db.Column(
+        db.Text
+    )  # set if the real mailbox move/flag failed
 
     __table_args__ = (
         # Backstop against double-processing the same mailbox message --
@@ -95,7 +113,9 @@ class Scan(db.Model):
         # account and its folder isn't recreated; documented in the README
         # as a known limitation rather than fully solved here.
         db.Index(
-            "uq_scans_mailbox_uid", "mailbox_uid", unique=True,
+            "uq_scans_mailbox_uid",
+            "mailbox_uid",
+            unique=True,
             sqlite_where=db.text("source = 'mailbox' AND mailbox_uid IS NOT NULL"),
             postgresql_where=db.text("source = 'mailbox' AND mailbox_uid IS NOT NULL"),
         ),
@@ -113,19 +133,33 @@ class Scan(db.Model):
         except (TypeError, ValueError):
             return []
 
+    def effective_prediction_confidence(self):
+        """
+        prediction_confidence if this row has it; otherwise derived from
+        confidence_score (== phishing_probability) the same way
+        ml/infer.py computes it for new scans: max(p, 1-p). Old rows
+        (pre prediction_confidence column) don't have it stored, and
+        confidence_score can itself be None for a handful of edge cases
+        (e.g. a row created without a classification) -- in that case
+        this returns None rather than a fabricated number. Shared by
+        to_dict() and /api/stats so both use one definition, not two.
+        """
+        if self.prediction_confidence is not None:
+            return self.prediction_confidence
+        if self.confidence_score is not None:
+            return max(self.confidence_score, 1 - self.confidence_score)
+        return None
+
     def to_dict(self):
-        # Old rows (pre prediction_confidence column) don't have this
-        # stored -- derive it from confidence_score (== phishing_probability)
-        # the same way ml/infer.py does, rather than showing null.
-        pred_confidence = self.prediction_confidence
-        if pred_confidence is None and self.confidence_score is not None:
-            pred_confidence = max(self.confidence_score, 1 - self.confidence_score)
+        pred_confidence = self.effective_prediction_confidence()
 
         return {
             "scan_id": self.scan_id,
             "from": self.sender,
             "subject": self.subject,
-            "body": "[content purged per data-minimisation policy]" if self.body_purged else self.body,
+            "body": "[content purged per data-minimisation policy]"
+            if self.body_purged
+            else self.body,
             "body_purged": self.body_purged,
             "classification": self.classification,
             "confidence_score": self.confidence_score,  # deprecated: this is actually phishing_probability
@@ -138,7 +172,9 @@ class Scan(db.Model):
             "status": self.status,
             "user_feedback": self.user_feedback,
             "notes": self.notes,
-            "scan_timestamp": self.scan_timestamp.isoformat() if self.scan_timestamp else None,
+            "scan_timestamp": self.scan_timestamp.isoformat()
+            if self.scan_timestamp
+            else None,
             "model_version": self.model_version,
             "source": self.source,
             "mailbox_action": self.mailbox_action,
@@ -149,6 +185,7 @@ class Scan(db.Model):
 
 class Feedback(db.Model):
     """FR-DB-07: user feedback and corrections to support model retraining."""
+
     __tablename__ = "feedback"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     scan_id = db.Column(db.String(20), db.ForeignKey("scans.scan_id"), nullable=False)
@@ -161,6 +198,7 @@ class Feedback(db.Model):
 
 class ModelVersion(db.Model):
     """Tracks every trained model so retraining is auditable (UC-07)."""
+
     __tablename__ = "model_versions"
     version = db.Column(db.String(10), primary_key=True)
     trained_at = db.Column(db.DateTime, default=utcnow)
@@ -180,13 +218,17 @@ class ModelVersion(db.Model):
         return {
             "version": self.version,
             "trained_at": self.trained_at.isoformat() if self.trained_at else None,
-            "accuracy": self.accuracy, "precision": self.precision, "recall": self.recall,
+            "accuracy": self.accuracy,
+            "precision": self.precision,
+            "recall": self.recall,
             "f1_score": self.f1_score,
             "false_positive_rate": self.false_positive_rate,
             "false_negative_rate": self.false_negative_rate,
-            "n_train": self.n_train, "n_test": self.n_test,
+            "n_train": self.n_train,
+            "n_test": self.n_test,
             "n_feedback_folded_in": self.n_feedback_folded_in,
-            "notes": self.notes, "is_current": self.is_current,
+            "notes": self.notes,
+            "is_current": self.is_current,
         }
 
 
@@ -198,6 +240,7 @@ class MailboxStatus(db.Model):
     what the admin console's "Mailbox" panel reads to show real
     connection health instead of a fake "connected" label.
     """
+
     __tablename__ = "mailbox_status"
     id = db.Column(db.Integer, primary_key=True)
     configured = db.Column(db.Boolean, default=False)
@@ -224,7 +267,9 @@ class MailboxStatus(db.Model):
         return {
             "configured": self.configured,
             "connected": self.connected,
-            "last_sync_at": self.last_sync_at.isoformat() if self.last_sync_at else None,
+            "last_sync_at": self.last_sync_at.isoformat()
+            if self.last_sync_at
+            else None,
             "last_error": self.last_error,
             "last_new_messages": self.last_new_messages,
             "total_synced": self.total_synced,
@@ -238,6 +283,7 @@ class MailboxStatus(db.Model):
 
 class AuditLog(db.Model):
     """FR-DB-04 / FR-SE-09: audit logs for monitoring and troubleshooting."""
+
     __tablename__ = "audit_log"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     actor = db.Column(db.String(80))
@@ -248,7 +294,9 @@ class AuditLog(db.Model):
 
     def to_dict(self):
         return {
-            "actor": self.actor, "action": self.action, "target": self.target,
+            "actor": self.actor,
+            "action": self.action,
+            "target": self.target,
             "details": self.details,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
         }

@@ -132,7 +132,7 @@ says so plainly instead of pretending to be connected.
 - **No permanent deletion** — quarantine is always a folder move, reversible
   from any real mail client at any time, not just from this admin console.
 - **No IMAP IDLE (push)** — it polls on an interval rather than getting
-  instant push notifications. IDLE is the natural next upgrade (see Section 11).
+  instant push notifications. IDLE is the natural next upgrade (see Section 15).
 - **Single mailbox, not per-user inboxes** — one account is monitored
   (representing "the organisation's protected mailbox"), matching the
   proposal's own framing of the platform sitting in front of a mail server
@@ -314,6 +314,8 @@ backend/
 
 ## 10. API reference
 
+**Admin review workflow:** the admin console's "Scan & quarantine log" panel has six filter tabs (All / Needs review / Quarantined / Flagged / Delivered / Released) plus a live "N item(s) awaiting review" count (quarantined + flagged, i.e. not yet released or confirmed). "Needs review" filters by classification; "Released" isn't a status of its own (a release just returns a scan to `Delivered`) so it's identified by the notes text `admin_action()`'s release branch sets — both are backed by real `/api/history?classification=`/`?released=true` query params, not just client-side display tricks. Every scan row is keyboard-operable (not just clickable) and opens the same detail modal with Release/Confirm/Escalate actions, unchanged from before.
+
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | GET | `/healthz` | — | liveness (process is up) |
@@ -326,9 +328,9 @@ backend/
 | POST | `/api/auth/change-password` | user | change own password |
 | GET | `/api/public/demo-scan` | — | canned example through the real model (homepage) |
 | POST | `/api/scan` | user | classify a manually-pasted email, persist it |
-| GET | `/api/history` | user | list own scans (all scans if admin); `?status=`, `?limit=` |
+| GET | `/api/history` | user | list own scans (all scans if admin); `?status=`, `?classification=`, `?released=true`, `?limit=` |
 | GET | `/api/scan/<id>` | user | single scan detail (own scans only, unless admin) |
-| GET | `/api/stats` | user | aggregate counts — own scans only, unless admin (`scope` field says which) |
+| GET | `/api/stats` | user | aggregate counts (`total`/`phishing`/`needs_review`/`legitimate`/`quarantined`/`flagged`/`pending_review`), `avg_phishing_probability` and `avg_prediction_confidence` (two distinct numbers, not one ambiguous `avg_confidence`) — own scans only, unless admin (`scope` field says which) |
 | POST | `/api/feedback` | user | correct a scan's label (own scans only, unless admin — 403 otherwise) |
 | POST | `/api/admin/action` | admin | release (real un-quarantine) / confirm / escalate |
 | GET | `/api/admin/model-info` | admin | current + historical model metrics |
@@ -340,7 +342,32 @@ backend/
 | POST | `/api/admin/mailbox-test` | admin | test the IMAP connection right now |
 | POST | `/api/admin/mailbox-sync` | admin | trigger an immediate sync (same code path as the Celery Beat job) |
 
-## 10a. Testing & deployment verification
+## 11. Backing up and rolling back
+
+**Before running any migration against a database you care about** (the seeded local SQLite file, or a real Postgres instance), back it up:
+
+```bash
+# SQLite (local dev)
+cp backend/instance/sentinel.db backend/instance/sentinel.db.bak-$(date +%Y%m%d)
+
+# Postgres (Docker/Render)
+docker compose exec db pg_dump -U sentinel sentinel > sentinel_backup_$(date +%Y%m%d).sql
+```
+
+To roll back a migration:
+
+```bash
+cd backend
+alembic current            # see what revision you're on
+alembic downgrade -1        # step back one migration
+# or: alembic downgrade <revision_id>   # jump to a specific revision
+```
+
+Every migration in this project (`backend/migrations/versions/`) has a real `downgrade()`, not a stub -- both new-column migrations (`08b35ecd1585`, `3bf198b6ab98`) drop exactly the columns/indexes they added, nothing else. None of them are destructive on `upgrade()` (no dropped columns, no data rewrites) -- see each migration file's own docstring for why the specific approach taken (e.g. `batch_alter_table` for SQLite, `server_default` on new NOT NULL columns) was chosen to avoid breaking existing rows.
+
+If a downgrade would lose data that only exists because of the newer schema (there isn't one of those in this project today, but if a future migration adds one), restore from the backup above instead of downgrading through it.
+
+## 12. Testing & deployment verification
 
 ```bash
 cd backend
@@ -373,7 +400,17 @@ Before a real submission demo, run `docker compose build && docker compose
 up` once yourself and confirm the `web` service reaches healthy — don't
 take this README's word for it beyond what's stated above.
 
-## 11. Known limitations (be upfront about these in your report/demo)
+## 13. Accessibility
+
+A focused pass (not a full audit) on `scan.html` and `admin.html`, since those are the two pages with real dynamic content:
+
+- **Fixed:** admin console's scan-log table rows were mouse-only (a bare `<tr>` click handler, no keyboard path at all) -- they're now `tabindex="0" role="button"` with an Enter/Space handler, so every scan is reachable and operable from the keyboard, not just a mouse.
+- **Fixed:** the scan-detail modal didn't manage focus -- opening it left focus behind on the page, and closing it didn't return focus anywhere. It now moves focus to the modal's close button on open, restores focus to whichever row/control opened it on close, and traps Tab/Shift+Tab inside the dialog while it's open (verified live: Shift+Tab from the first focusable element wraps to the last, and vice versa).
+- **Fixed:** `--safe` (a blue, `#4C6FFF`) measured ~4.0:1 contrast as literal text color on the dark background -- just under the WCAG AA 4.5:1 minimum for normal text. Added `--safe-text` (`#8FA5FF`, ~7.2:1) and switched every place `--safe` was used as text (chips, success messages, status pills, stat cards) to it, leaving `--safe` itself unchanged for backgrounds/dots/borders where the ratio doesn't apply.
+- **Already in place, verified still correct:** `aria-live`/`role="status"`/`role="alert"` on error messages, the processing spinner, feedback confirmation, mailbox error banner, and toast; proper `<label for>` on every form input; a global `:focus-visible` outline (not suppressed anywhere); `prefers-reduced-motion` handling for the animated backgrounds; the scan-log and admin tables wrap in `overflow-x:auto` rather than causing page-level horizontal scroll on mobile (checked at a 375px viewport).
+- **Requires manual verification, not done here:** testing with an actual screen reader (NVDA/JAWS/VoiceOver) rather than the accessibility-tree inspection used above; an exhaustive contrast audit of every color pairing on every page (only the confirmed `--safe` issue was fixed); testing with voice-control/switch-access software.
+
+## 14. Known limitations (be upfront about these in your report/demo)
 
 - **The text model can produce false positives/negatives.** Precision and
   recall are both in the mid-to-high 90s (Section 4), not 100% — the
@@ -412,7 +449,7 @@ take this README's word for it beyond what's stated above.
   account currently has access to mailbox monitoring, quarantine, and the
   admin console regardless of which tier they'd notionally be on.
 
-## 12. Suggestions for further upgrade (roughly ordered by effort vs. payoff)
+## 15. Suggestions for further upgrade (roughly ordered by effort vs. payoff)
 
 **Small, high-payoff (do these if you have any time left):**
 - **Multiple monitored mailboxes** — extend `MailboxConfig` to a list loaded

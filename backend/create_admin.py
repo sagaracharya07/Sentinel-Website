@@ -8,6 +8,7 @@ credentials.
 Usage (from backend/):
     python create_admin.py <username> <password> [--role admin|user]
 """
+
 import argparse
 import sys
 
@@ -25,7 +26,10 @@ def main():
     args = parser.parse_args()
 
     if len(args.password) < 8:
-        print("Refusing to create an account with a password under 8 characters.", file=sys.stderr)
+        print(
+            "Refusing to create an account with a password under 8 characters.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     with app.app_context():

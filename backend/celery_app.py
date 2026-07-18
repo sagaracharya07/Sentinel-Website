@@ -15,6 +15,7 @@ Run (see docker-compose.yml for the full local-dev picture):
     celery -A celery_app worker --loglevel=info
     celery -A celery_app beat --loglevel=info
 """
+
 import os
 
 from celery import Celery
@@ -27,6 +28,7 @@ from monitoring import init_sentry
 # only show up in stdout logs, easy to miss compared to the web process's
 # errors.
 from sentry_sdk.integrations.celery import CeleryIntegration
+
 init_sentry(extra_integrations=[CeleryIntegration()])
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")

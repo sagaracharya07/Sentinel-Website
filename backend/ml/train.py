@@ -22,6 +22,7 @@ version," so an older one works too).
 
 Run: python3 -m ml.train             (from the backend/ directory)
 """
+
 import os
 import json
 import time
@@ -36,7 +37,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score, confusion_matrix,
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
 )
 
 from ml.features import engineered_features, NUMERIC_FEATURE_NAMES
@@ -54,8 +59,11 @@ def build_feature_matrix(df, vectorizer=None, scaler=None, fit=True):
 
     if fit:
         vectorizer = TfidfVectorizer(
-            max_features=3500, ngram_range=(1, 2), min_df=3,
-            sublinear_tf=True, stop_words="english",
+            max_features=3500,
+            ngram_range=(1, 2),
+            min_df=3,
+            sublinear_tf=True,
+            stop_words="english",
         )
         tfidf = vectorizer.fit_transform(text)
     else:
@@ -63,7 +71,9 @@ def build_feature_matrix(df, vectorizer=None, scaler=None, fit=True):
 
     numeric_rows = []
     for _, row in df.iterrows():
-        nums, _, _ = engineered_features(row.get("subject", ""), row.get("body", ""), row.get("sender", ""))
+        nums, _, _ = engineered_features(
+            row.get("subject", ""), row.get("body", ""), row.get("sender", "")
+        )
         numeric_rows.append(nums)
     numeric = np.array(numeric_rows, dtype=float)
 
@@ -101,6 +111,7 @@ def next_version():
 
     try:
         from models import ModelVersion
+
         for row in ModelVersion.query.with_entities(ModelVersion.version).all():
             v = row[0]
             if v.startswith("v"):
@@ -123,7 +134,9 @@ def train(extra_df: pd.DataFrame = None, notes: str = "Initial training run"):
     """
     df = pd.read_csv(os.path.join(DATA_DIR, "combined_dataset.csv"))
     if extra_df is not None and len(extra_df):
-        df = pd.concat([df, extra_df[["sender", "subject", "body", "label"]]], ignore_index=True)
+        df = pd.concat(
+            [df, extra_df[["sender", "subject", "body", "label"]]], ignore_index=True
+        )
         df = df.drop_duplicates(subset=["subject", "body"], keep="last")
 
     train_df, test_df = train_test_split(
@@ -132,12 +145,18 @@ def train(extra_df: pd.DataFrame = None, notes: str = "Initial training run"):
 
     t0 = time.time()
     X_train, vectorizer, scaler = build_feature_matrix(train_df, fit=True)
-    X_test, _, _ = build_feature_matrix(test_df, vectorizer=vectorizer, scaler=scaler, fit=False)
+    X_test, _, _ = build_feature_matrix(
+        test_df, vectorizer=vectorizer, scaler=scaler, fit=False
+    )
     y_train, y_test = train_df["label"].values, test_df["label"].values
 
     clf = RandomForestClassifier(
-        n_estimators=150, max_depth=22, min_samples_leaf=3,
-        class_weight="balanced", n_jobs=-1, random_state=42,
+        n_estimators=150,
+        max_depth=22,
+        min_samples_leaf=3,
+        class_weight="balanced",
+        n_jobs=-1,
+        random_state=42,
     )
     clf.fit(X_train, y_train)
     train_seconds = round(time.time() - t0, 2)
@@ -195,7 +214,15 @@ def train(extra_df: pd.DataFrame = None, notes: str = "Initial training run"):
 
     logger.info(
         "Trained %s: acc=%.4f precision=%.4f recall=%.4f f1=%.4f FPR=%.4f FNR=%.4f (%ss, %s samples)",
-        version, acc, prec, rec, f1, false_positive_rate, false_negative_rate, train_seconds, len(df),
+        version,
+        acc,
+        prec,
+        rec,
+        f1,
+        false_positive_rate,
+        false_negative_rate,
+        train_seconds,
+        len(df),
     )
     return version, metrics, meta
 

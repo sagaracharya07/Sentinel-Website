@@ -8,4 +8,5 @@ imports this module once per worker process, so seeding here would race
 multiple workers against the same INSERT. See seed_startup.py, which runs
 once before gunicorn spawns any workers (Dockerfile's CMD chain).
 """
+
 from app import app  # noqa: F401 -- gunicorn imports this module and serves the `app` object

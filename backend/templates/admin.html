@@ -2,14 +2,14 @@
 {% block title %}Admin console — Sentinel AI{% endblock %}
 {% block extra_style %}
 <style>
-  .stat-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:18px;margin-top:24px}
+  .stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:24px}
   @media (max-width:1200px){ .stat-cards{grid-template-columns:repeat(3,1fr)} }
   @media (max-width:620px){ .stat-cards{grid-template-columns:1fr 1fr} }
   .stat-card{background:var(--paper-2);border:1px solid var(--paper-line);border-radius:var(--radius-m);padding:20px;box-shadow:var(--shadow-1)}
   .stat-card b{display:block;font-family:var(--display);font-size:1.7rem}
   .stat-card span{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--paper-muted)}
   .stat-card.threat b{color:var(--threat)}
-  .stat-card.safe b{color:var(--safe)}
+  .stat-card.safe b{color:var(--safe-text)}
   .stat-card.warn b{color:var(--warn)}
 
   .analytics-row{display:grid;grid-template-columns:1.4fr 1fr;gap:24px;margin-top:32px}
@@ -37,6 +37,8 @@
     background:var(--paper-1);color:var(--paper-muted);cursor:pointer;
   }
   .ftab.active{background:var(--scan);color:var(--ink-0);border-color:var(--scan);font-weight:700}
+  #pendingReviewBadge{font-family:var(--mono);font-size:.8rem;color:var(--warn)}
+  #pendingReviewBadge.zero{color:var(--paper-muted)}
 
   /* modal */
   .modal-backdrop{
@@ -93,7 +95,8 @@
       <div class="stat-card warn hud-frame"><b id="statNeedsReview">0</b><span>Needs review</span></div>
       <div class="stat-card safe hud-frame"><b id="statLegit">0</b><span>Legitimate</span></div>
       <div class="stat-card threat hud-frame alert"><b id="statQuarantined">0</b><span>Quarantined</span></div>
-      <div class="stat-card warn hud-frame"><b id="statAvgConf">0%</b><span>Avg. phishing probability</span></div>
+      <div class="stat-card warn hud-frame"><b id="statAvgProb">0%</b><span>Avg. phishing probability</span></div>
+      <div class="stat-card warn hud-frame"><b id="statAvgConf">0%</b><span>Avg. prediction confidence</span></div>
     </div>
 
     <div class="analytics-row">
@@ -118,11 +121,14 @@
         <h3>Scan &amp; quarantine log</h3>
         <span style="font-family:var(--mono);font-size:.78rem;color:var(--paper-muted)" id="tableCount"></span>
       </div>
+      <div style="padding:0 24px 10px" id="pendingReviewBadge" role="status"></div>
       <div class="filter-tabs" id="filterTabs">
         <button class="ftab active" data-f="All">All</button>
+        <button class="ftab" data-f="NeedsReview">Needs review</button>
         <button class="ftab" data-f="Quarantined">Quarantined</button>
         <button class="ftab" data-f="Flagged">Flagged</button>
         <button class="ftab" data-f="Delivered">Delivered</button>
+        <button class="ftab" data-f="Released">Released</button>
       </div>
       <div class="filter-tabs" id="sourceTabs" style="border-top:none;padding-top:0">
         <button class="ftab active" data-s="All">All sources</button>

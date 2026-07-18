@@ -9,6 +9,7 @@ correctly in tasks.py) is left alone -- Celery configures its own logging
 and duplicating that here would just produce two competing configurations
 for the worker/beat processes.
 """
+
 import logging
 import os
 import sys
@@ -28,8 +29,10 @@ def configure_logging():
         return
 
     handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter(
-        fmt="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%S%z",
-    ))
+    handler.setFormatter(
+        logging.Formatter(
+            fmt="%(asctime)s %(levelname)s %(name)s: %(message)s",
+            datefmt="%Y-%m-%dT%H:%M:%S%z",
+        )
+    )
     root.addHandler(handler)

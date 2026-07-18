@@ -3,6 +3,7 @@ Single source of truth for resolving the database connection string, shared
 by app.py (Flask-SQLAlchemy config) and migrations/env.py (Alembic) so the
 two can never disagree about which database they're pointed at.
 """
+
 import os
 
 
@@ -24,5 +25,5 @@ def resolve_database_uri(instance_dir: str, is_production: bool) -> str:
             )
         return "sqlite:///" + os.path.join(instance_dir, "sentinel.db")
     if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
+        url = "postgresql://" + url[len("postgres://") :]
     return url

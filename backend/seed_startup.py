@@ -10,6 +10,7 @@ hypothetical: it's exactly what crashed the whole gunicorn master the
 first time this was tried as an import-time call in wsgi.py, so seeding
 now happens as its own one-shot step instead.
 """
+
 from app import app, ensure_seed_data
 
 with app.app_context():

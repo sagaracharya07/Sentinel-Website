@@ -3,6 +3,7 @@ Tests for auth.py's password hashing and the login_required/admin_required
 decorators, exercised through real protected routes rather than by calling
 the decorators in isolation, since that's how they're actually used.
 """
+
 from auth import create_user, verify_login
 
 

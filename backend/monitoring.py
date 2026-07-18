@@ -6,6 +6,7 @@ this is fully safe to call in every environment including local dev and
 CI, and only actually reports anything once a real DSN is configured at
 deploy time.
 """
+
 import os
 
 

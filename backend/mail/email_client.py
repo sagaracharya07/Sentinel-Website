@@ -12,6 +12,7 @@ just for a "send" scope instead of "read". Swapping in a transactional API
 provider later would only mean rewriting send_email()'s body; MailConfig
 and every caller stays the same.
 """
+
 import os
 import smtplib
 import ssl
@@ -51,7 +52,9 @@ class MailConfig:
 
 def public_base_url() -> str:
     """Used to build links (verification, reset) inside emails."""
-    return os.environ.get("SENTINEL_PUBLIC_BASE_URL", "http://localhost:5000").rstrip("/")
+    return os.environ.get("SENTINEL_PUBLIC_BASE_URL", "http://localhost:5000").rstrip(
+        "/"
+    )
 
 
 def send_email(to: str, subject: str, html_body: str) -> bool:
@@ -70,7 +73,9 @@ def send_email(to: str, subject: str, html_body: str) -> bool:
     """
     cfg = MailConfig.from_env()
     if not cfg:
-        print(f"[DEV MODE: no MAIL_HOST configured] Email to {to!r}: {subject!r}\n{html_body}")
+        print(
+            f"[DEV MODE: no MAIL_HOST configured] Email to {to!r}: {subject!r}\n{html_body}"
+        )
         return True
 
     msg = EmailMessage()

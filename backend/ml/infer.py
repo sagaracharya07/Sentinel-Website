@@ -17,6 +17,7 @@ ml/artifacts/current.json file when object storage isn't configured --
 correct for docker-compose, which shares ml/artifacts/ via a volume
 instead (see docker-compose.yml).
 """
+
 import os
 import json
 import joblib
@@ -28,12 +29,21 @@ from ml import artifact_store
 HERE = os.path.dirname(os.path.abspath(__file__))
 ARTIFACTS_DIR = os.path.join(HERE, "artifacts")
 
-_state = {"version": None, "vectorizer": None, "scaler": None, "model": None, "meta": None, "metrics": None}
+_state = {
+    "version": None,
+    "vectorizer": None,
+    "scaler": None,
+    "model": None,
+    "meta": None,
+    "metrics": None,
+}
 
 
 def _load_version(version):
     version_dir = os.path.join(ARTIFACTS_DIR, version)
-    artifact_store.download_version(version_dir, version)  # no-op if not configured or already cached
+    artifact_store.download_version(
+        version_dir, version
+    )  # no-op if not configured or already cached
     vectorizer = joblib.load(os.path.join(version_dir, "tfidf_vectorizer.joblib"))
     scaler = joblib.load(os.path.join(version_dir, "scaler.joblib"))
     model = joblib.load(os.path.join(version_dir, "model.joblib"))
@@ -60,8 +70,14 @@ def _pointer_version():
 def reload():
     version = _pointer_version()
     vectorizer, scaler, model, meta, metrics = _load_version(version)
-    _state.update(version=version, vectorizer=vectorizer, scaler=scaler,
-                  model=model, meta=meta, metrics=metrics)
+    _state.update(
+        version=version,
+        vectorizer=vectorizer,
+        scaler=scaler,
+        model=model,
+        meta=meta,
+        metrics=metrics,
+    )
     return version
 
 
@@ -87,8 +103,14 @@ def promote(version: str) -> str:
         json.dump({"version": version}, f)
     artifact_store.set_current_version(version)
 
-    _state.update(version=version, vectorizer=vectorizer, scaler=scaler,
-                  model=model, meta=meta, metrics=metrics)
+    _state.update(
+        version=version,
+        vectorizer=vectorizer,
+        scaler=scaler,
+        model=model,
+        meta=meta,
+        metrics=metrics,
+    )
     return version
 
 
@@ -107,7 +129,11 @@ def _ensure_current():
 
 def current_info():
     _ensure_current()
-    return {"version": _state["version"], "meta": _state["meta"], "metrics": _state["metrics"]}
+    return {
+        "version": _state["version"],
+        "meta": _state["meta"],
+        "metrics": _state["metrics"],
+    }
 
 
 def decide(phishing_proba: float):
@@ -143,9 +169,12 @@ def classify(subject: str, body: str, sender: str = ""):
 
     from ml.features import engineered_features
 
-    row_df = pd.DataFrame([{"subject": subject or "", "body": body or "", "sender": sender or ""}])
-    X, _, _ = build_feature_matrix(row_df, vectorizer=_state["vectorizer"],
-                                    scaler=_state["scaler"], fit=False)
+    row_df = pd.DataFrame(
+        [{"subject": subject or "", "body": body or "", "sender": sender or ""}]
+    )
+    X, _, _ = build_feature_matrix(
+        row_df, vectorizer=_state["vectorizer"], scaler=_state["scaler"], fit=False
+    )
 
     model = _state["model"]
     proba = model.predict_proba(X)[0]
@@ -169,7 +198,9 @@ def classify(subject: str, body: str, sender: str = ""):
         "label": label,
         "phishing_probability": round(phishing_proba, 4),
         "prediction_confidence": round(prediction_confidence, 4),
-        "confidence": round(phishing_proba, 4),  # deprecated alias of phishing_probability, kept for backward compat
+        "confidence": round(
+            phishing_proba, 4
+        ),  # deprecated alias of phishing_probability, kept for backward compat
         "score": score,
         "risk_level": risk_level,
         "findings": findings,

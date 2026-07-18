@@ -10,6 +10,7 @@ once, at import time, and conftest.py is guaranteed to load before any test
 module's `from app import app`, whereas fixtures only run once a test
 actually executes (too late to affect that import).
 """
+
 import os
 import sys
 import tempfile
@@ -17,9 +18,13 @@ import tempfile
 _TEST_DB_DIR = tempfile.mkdtemp(prefix="sentinel_test_")
 _TEST_DB_PATH = os.path.join(_TEST_DB_DIR, "test_sentinel.db")
 
-os.environ["SENTINEL_ENV"] = "development"  # keep dev-mode defaults (insecure secret is fine for tests)
+os.environ["SENTINEL_ENV"] = (
+    "development"  # keep dev-mode defaults (insecure secret is fine for tests)
+)
 os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB_PATH}"
-os.environ.pop("REDIS_URL", None)  # rate limiter falls back to in-memory storage during tests
+os.environ.pop(
+    "REDIS_URL", None
+)  # rate limiter falls back to in-memory storage during tests
 os.environ.pop("MAILBOX_HOST", None)
 os.environ.pop("MAILBOX_USERNAME", None)
 os.environ.pop("MAILBOX_PASSWORD", None)
@@ -61,7 +66,9 @@ def _login_as(client, username, password, role):
     from auth import create_user
 
     create_user(username, password, role=role)
-    resp = client.post("/api/auth/login", json={"username": username, "password": password})
+    resp = client.post(
+        "/api/auth/login", json={"username": username, "password": password}
+    )
     assert resp.status_code == 200, resp.get_json()
     return client
 

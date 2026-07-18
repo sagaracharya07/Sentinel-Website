@@ -4,6 +4,7 @@ signal-extraction half of the classifier (the other half, TF-IDF, isn't
 individually interpretable, so these signals are what the UI shows the
 user as "why was this flagged"). Pure unit tests: no Flask app, no DB.
 """
+
 from ml.features import engineered_features
 
 
@@ -112,6 +113,8 @@ def test_benign_short_message_has_no_findings():
 
 
 def test_handles_none_and_missing_fields_gracefully():
-    numeric, findings, highlights = engineered_features(subject=None, body=None, sender=None)
+    numeric, findings, highlights = engineered_features(
+        subject=None, body=None, sender=None
+    )
     assert isinstance(numeric, list)
     assert findings == []

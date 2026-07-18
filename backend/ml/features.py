@@ -19,6 +19,7 @@ Two feature families are produced and concatenated:
      looks for and let the platform surface *why* an email was flagged,
      satisfying the "explainable scoring" / FR-FE-05 requirement.
 """
+
 import re
 from urllib.parse import urlparse
 
@@ -27,35 +28,90 @@ from urllib.parse import urlparse
 # the explanations users saw in the v1 demo remain meaningful)
 # ---------------------------------------------------------------------------
 URGENCY_PHRASES = [
-    "act now", "verify your account", "account suspended", "confirm your identity",
-    "urgent action required", "your account will be closed", "immediate action",
-    "click here immediately", "limited time", "final notice", "unusual activity",
-    "unauthorized login", "suspended your account", "expire in 24 hours",
-    "action required", "security alert", "failure to comply", "payment failed",
-    "reactivate your account", "confirm now", "verify now", "will be permanently",
+    "act now",
+    "verify your account",
+    "account suspended",
+    "confirm your identity",
+    "urgent action required",
+    "your account will be closed",
+    "immediate action",
+    "click here immediately",
+    "limited time",
+    "final notice",
+    "unusual activity",
+    "unauthorized login",
+    "suspended your account",
+    "expire in 24 hours",
+    "action required",
+    "security alert",
+    "failure to comply",
+    "payment failed",
+    "reactivate your account",
+    "confirm now",
+    "verify now",
+    "will be permanently",
 ]
 
 CREDENTIAL_PHRASES = [
-    "password", "login credentials", "social security", "credit card number",
-    "bank account", "pin number", "verify your password", "update your billing",
-    "ssn", "confirm your password", "card verification", "routing number",
-    "account number", "wire transfer",
+    "password",
+    "login credentials",
+    "social security",
+    "credit card number",
+    "bank account",
+    "pin number",
+    "verify your password",
+    "update your billing",
+    "ssn",
+    "confirm your password",
+    "card verification",
+    "routing number",
+    "account number",
+    "wire transfer",
 ]
 
 GENERIC_GREETINGS = [
-    "dear customer", "dear user", "dear valued customer", "dear account holder",
-    "dear member", "dear beneficiary", "dear sir/madam", "dear friend",
+    "dear customer",
+    "dear user",
+    "dear valued customer",
+    "dear account holder",
+    "dear member",
+    "dear beneficiary",
+    "dear sir/madam",
+    "dear friend",
 ]
 
 SHORTENER_DOMAINS = {
-    "bit.ly", "tinyurl.com", "t.co", "goo.gl", "ow.ly", "is.gd", "buff.ly",
-    "rebrand.ly", "cutt.ly", "shorturl.at",
+    "bit.ly",
+    "tinyurl.com",
+    "t.co",
+    "goo.gl",
+    "ow.ly",
+    "is.gd",
+    "buff.ly",
+    "rebrand.ly",
+    "cutt.ly",
+    "shorturl.at",
 }
 
 TRUSTED_BRANDS = [
-    "paypal", "microsoft", "apple", "amazon", "netflix", "commonwealth bank",
-    "anz", "westpac", "nab", "auspost", "ato", "google", "facebook", "instagram",
-    "chase", "wells fargo", "irs", "docusign",
+    "paypal",
+    "microsoft",
+    "apple",
+    "amazon",
+    "netflix",
+    "commonwealth bank",
+    "anz",
+    "westpac",
+    "nab",
+    "auspost",
+    "ato",
+    "google",
+    "facebook",
+    "instagram",
+    "chase",
+    "wells fargo",
+    "irs",
+    "docusign",
 ]
 
 
@@ -64,7 +120,9 @@ def _count_hits(text_lower, phrases):
 
 
 def extract_urls(text):
-    return re.findall(r'\b((?:https?://|www\.)[^\s<>"\')]+)', text or "", flags=re.IGNORECASE)
+    return re.findall(
+        r'\b((?:https?://|www\.)[^\s<>"\')]+)', text or "", flags=re.IGNORECASE
+    )
 
 
 def _domain(url):
@@ -121,81 +179,130 @@ def engineered_features(subject: str, body: str, sender: str = ""):
     domain_match = re.search(r"@([\w.\-]+)", sender_lower)
     sender_domain = domain_match.group(1) if domain_match else None
     for brand in TRUSTED_BRANDS:
-        if brand in sender_lower and sender_domain and brand.replace(" ", "") not in sender_domain:
+        if (
+            brand in sender_lower
+            and sender_domain
+            and brand.replace(" ", "") not in sender_domain
+        ):
             sender_mismatch += 1
-            findings.append({
-                "type": "Sender / brand mismatch",
-                "detail": f'Display name references "{brand}" but sender domain is "{sender_domain}"',
-                "weight": 18, "severity": "high",
-            })
+            findings.append(
+                {
+                    "type": "Sender / brand mismatch",
+                    "detail": f'Display name references "{brand}" but sender domain is "{sender_domain}"',
+                    "weight": 18,
+                    "severity": "high",
+                }
+            )
 
     word_count = len(combined.split())
     short_with_link = 1 if (0 < word_count < 40 and len(urls) > 0) else 0
 
     if urgency_hits:
-        findings.append({
-            "type": "Urgency / pressure language",
-            "detail": ", ".join(f'"{p}"' for p in urgency_hits[:4]),
-            "weight": min(len(urgency_hits) * 9, 30),
-            "severity": "high" if len(urgency_hits) > 2 else "medium",
-        })
+        findings.append(
+            {
+                "type": "Urgency / pressure language",
+                "detail": ", ".join(f'"{p}"' for p in urgency_hits[:4]),
+                "weight": min(len(urgency_hits) * 9, 30),
+                "severity": "high" if len(urgency_hits) > 2 else "medium",
+            }
+        )
     if cred_hits:
-        findings.append({
-            "type": "Requests sensitive information",
-            "detail": ", ".join(f'"{p}"' for p in cred_hits[:4]),
-            "weight": min(len(cred_hits) * 11, 26),
-            "severity": "high",
-        })
+        findings.append(
+            {
+                "type": "Requests sensitive information",
+                "detail": ", ".join(f'"{p}"' for p in cred_hits[:4]),
+                "weight": min(len(cred_hits) * 11, 26),
+                "severity": "high",
+            }
+        )
     if greet_hits:
-        findings.append({
-            "type": "Generic greeting",
-            "detail": f'"{greet_hits[0]}" — not addressed by name',
-            "weight": 8, "severity": "low",
-        })
+        findings.append(
+            {
+                "type": "Generic greeting",
+                "detail": f'"{greet_hits[0]}" — not addressed by name',
+                "weight": 8,
+                "severity": "low",
+            }
+        )
     if shortener_hits or raw_ip_hits or brand_mismatch_hits or len(urls) >= 3:
         notes = []
         w = 0
         if shortener_hits:
-            notes.append(f"{shortener_hits[0]} (link shortener)"); w += 12
+            notes.append(f"{shortener_hits[0]} (link shortener)")
+            w += 12
         if raw_ip_hits:
-            notes.append(f"{raw_ip_hits[0]} (raw IP address link)"); w += 16
+            notes.append(f"{raw_ip_hits[0]} (raw IP address link)")
+            w += 16
         if brand_mismatch_hits:
             host, brand = brand_mismatch_hits[0]
-            notes.append(f'link domain "{host}" does not match mentioned brand "{brand}"'); w += 10
+            notes.append(
+                f'link domain "{host}" does not match mentioned brand "{brand}"'
+            )
+            w += 10
         if len(urls) >= 3:
-            notes.append(f"{len(urls)} links in one message"); w += 6
-        findings.append({
-            "type": "Suspicious links", "detail": "; ".join(notes),
-            "weight": min(w, 34), "severity": "high" if w > 18 else "medium",
-        })
+            notes.append(f"{len(urls)} links in one message")
+            w += 6
+        findings.append(
+            {
+                "type": "Suspicious links",
+                "detail": "; ".join(notes),
+                "weight": min(w, 34),
+                "severity": "high" if w > 18 else "medium",
+            }
+        )
     if exclaims >= 3 or caps_words >= 2:
-        findings.append({
-            "type": "Formatting anomalies",
-            "detail": f"{exclaims} exclamation marks, {caps_words} all-caps word(s)",
-            "weight": min(exclaims * 2 + caps_words * 3, 14), "severity": "low",
-        })
+        findings.append(
+            {
+                "type": "Formatting anomalies",
+                "detail": f"{exclaims} exclamation marks, {caps_words} all-caps word(s)",
+                "weight": min(exclaims * 2 + caps_words * 3, 14),
+                "severity": "low",
+            }
+        )
     if short_with_link:
-        findings.append({
-            "type": "Low-content message with link",
-            "detail": f"Only {word_count} words but includes a link — typical of rushed phishing sends",
-            "weight": 6, "severity": "low",
-        })
+        findings.append(
+            {
+                "type": "Low-content message with link",
+                "detail": f"Only {word_count} words but includes a link — typical of rushed phishing sends",
+                "weight": 6,
+                "severity": "low",
+            }
+        )
 
-    highlights = list(dict.fromkeys(
-        urgency_hits + cred_hits + greet_hits + [u for u in urls]
-    ))
+    highlights = list(
+        dict.fromkeys(urgency_hits + cred_hits + greet_hits + [u for u in urls])
+    )
 
     numeric = [
-        len(urgency_hits), len(cred_hits), len(greet_hits),
-        len(urls), len(shortener_hits), len(raw_ip_hits), len(brand_mismatch_hits),
-        exclaims, caps_words, sender_mismatch, short_with_link, word_count,
+        len(urgency_hits),
+        len(cred_hits),
+        len(greet_hits),
+        len(urls),
+        len(shortener_hits),
+        len(raw_ip_hits),
+        len(brand_mismatch_hits),
+        exclaims,
+        caps_words,
+        sender_mismatch,
+        short_with_link,
+        word_count,
         1 if word_count == 0 else 0,
     ]
     return numeric, findings, highlights
 
 
 NUMERIC_FEATURE_NAMES = [
-    "urgency_hits", "credential_hits", "generic_greeting_hits", "url_count",
-    "shortener_count", "raw_ip_count", "brand_mismatch_count", "exclaim_count",
-    "caps_word_count", "sender_mismatch", "short_with_link", "word_count", "empty_body",
+    "urgency_hits",
+    "credential_hits",
+    "generic_greeting_hits",
+    "url_count",
+    "shortener_count",
+    "raw_ip_count",
+    "brand_mismatch_count",
+    "exclaim_count",
+    "caps_word_count",
+    "sender_mismatch",
+    "short_with_link",
+    "word_count",
+    "empty_body",
 ]

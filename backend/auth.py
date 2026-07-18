@@ -9,6 +9,7 @@ passwords are ever stored or logged. This is intentionally simple
 real hashing + real session-based access control, not a cosmetic login
 screen.
 """
+
 import secrets
 from functools import wraps
 from flask import session, jsonify
@@ -24,7 +25,12 @@ def generate_token() -> str:
 
 
 def create_user(username, password, role="user", email=None):
-    u = User(username=username, password_hash=generate_password_hash(password), role=role, email=email)
+    u = User(
+        username=username,
+        password_hash=generate_password_hash(password),
+        role=role,
+        email=email,
+    )
     db.session.add(u)
     db.session.commit()
     return u
@@ -56,6 +62,7 @@ def login_required(fn):
         if not session.get("username"):
             return jsonify({"error": "Authentication required"}), 401
         return fn(*args, **kwargs)
+
     return wrapper
 
 
@@ -67,6 +74,7 @@ def admin_required(fn):
         if session.get("role") != "admin":
             return jsonify({"error": "Admin role required"}), 403
         return fn(*args, **kwargs)
+
     return wrapper
 
 
