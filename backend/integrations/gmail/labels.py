@@ -55,14 +55,18 @@ def find_label_id(service, name: str):
 def create_label(service, name: str) -> str:
     """Create one label, returning its id.
 
-    Two distinct failure modes, handled differently:
-      - GmailPermanentError (409 "alreadyExists"): another request already
-        created it -- nothing to retry, re-read and reuse the existing id.
-      - GmailRetryableError (409 "aborted", rate limit, 5xx): nothing was
-        actually created, so re-reading would find nothing -- retry the
-        creation itself a few times with a short backoff. Seen in practice
-        creating several Sentinel labels in quick succession right after a
-        brand-new OAuth grant.
+    On ANY create conflict (permanent or retryable), always check whether
+    the label already exists before deciding what to do next -- Gmail does
+    not consistently report "alreadyExists" as the reason for a genuine
+    duplicate; it can also come back as 409 "aborted" (seen in practice: a
+    label created on an earlier attempt, then a later attempt tries to
+    create it again and gets "aborted", not "alreadyExists"). Trusting the
+    reason string to decide "is this actually a duplicate" was the original
+    bug here -- a real duplicate reported as "aborted" would be retried
+    forever, since nothing about blindly retrying the same create ever
+    resolves a name that's already taken. Re-reading first sidesteps that:
+    if it's really there, reuse it immediately; only retry when a fresh
+    re-read confirms the label genuinely doesn't exist yet.
     """
     body = {
         "name": name,
@@ -78,18 +82,15 @@ def create_label(service, name: str) -> str:
                 service.users().labels().create(userId="me", body=body)
             )
             return created["id"]
-        except client.GmailRetryableError:
-            if attempts >= max_attempts:
-                raise
-            # Exponential backoff capped at 3s -- a single "aborted" retry
-            # wasn't enough in practice for a brand-new label hierarchy
-            # (parent + 4 children created back-to-back), so this budgets
-            # up to ~9s total rather than assume a quick race.
-            time.sleep(min(0.5 * (2 ** (attempts - 1)), 3.0))
-        except client.GmailPermanentError:
+        except (client.GmailPermanentError, client.GmailRetryableError) as e:
             existing = find_label_id(service, name)
             if existing:
                 return existing
+            if isinstance(e, client.GmailRetryableError) and attempts < max_attempts:
+                # Genuinely not created yet (re-read confirmed it) and the
+                # error is transient -- worth another attempt with backoff.
+                time.sleep(min(0.5 * (2 ** (attempts - 1)), 3.0))
+                continue
             raise
 
 

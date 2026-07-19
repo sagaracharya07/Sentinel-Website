@@ -137,7 +137,9 @@ class _LabelsApi:
                 raise make_http_error(409, "aborted", "concurrent modification")
             exists = any(x["name"] == name for x in self.s.labels_store)
             if exists or self.s.force_create_conflict:
-                raise make_http_error(409, "alreadyExists", "Label name exists")
+                raise make_http_error(
+                    409, self.s.create_conflict_reason, "Label name exists"
+                )
             new = {"id": f"LBL-{self.s._next_label_id}", "name": name}
             self.s._next_label_id += 1
             self.s.labels_store.append(new)
@@ -220,6 +222,7 @@ class FakeGmailService:
         self.history_store = list(history or [])
         self.history_expired = False
         self.force_create_conflict = False
+        self.create_conflict_reason = "alreadyExists"  # Gmail doesn't always say this
         self.abort_remaining = 0  # next N label creates raise 409 "aborted"
         self.get_raises = {}  # message_id -> exception to raise on get()
         self.modify_calls = []

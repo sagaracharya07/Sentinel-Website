@@ -83,3 +83,21 @@ def test_create_label_gives_up_after_repeated_aborts(app, monkeypatch):
     with pytest.raises(GmailRetryableError):
         labels.create_label(svc, "Sentinel/Quarantine")
     assert svc.create_count == 6  # max_attempts, then gives up
+
+
+def test_create_label_reuses_existing_even_when_reported_as_aborted(app, monkeypatch):
+    # The real bug this guards against: Gmail does not consistently report
+    # "alreadyExists" for a genuine duplicate -- a label created on an
+    # earlier attempt can be rejected again as 409 "aborted" instead. The
+    # old code trusted that reason string to decide whether to re-check, so
+    # a real duplicate reported as "aborted" was retried forever (identical
+    # failure on every attempt, no amount of backoff fixed it). The fix
+    # re-checks existence on ANY conflict, regardless of reason.
+    monkeypatch.setattr(labels.time, "sleep", lambda *_: None)
+    svc = FakeGmailService(
+        labels=[{"id": "LBL-existing", "name": "Sentinel/Quarantine"}]
+    )
+    svc.force_create_conflict = True
+    svc.create_conflict_reason = "aborted"
+    assert labels.create_label(svc, "Sentinel/Quarantine") == "LBL-existing"
+    assert svc.create_count == 1  # found on the first re-read, no retry loop needed
