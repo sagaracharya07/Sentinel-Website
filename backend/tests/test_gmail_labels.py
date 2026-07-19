@@ -60,23 +60,26 @@ def test_find_label_id(app):
     assert labels.find_label_id(svc, "Nonexistent") is None
 
 
-def test_create_label_retries_on_aborted_then_succeeds(app):
+def test_create_label_retries_on_aborted_then_succeeds(app, monkeypatch):
     # Gmail's 409 "aborted" means nothing was created -- re-reading (as the
     # 409 "alreadyExists" case does) would find nothing, so this must retry
     # the creation itself. Seen in practice creating several labels in quick
     # succession right after a brand-new OAuth grant.
+    monkeypatch.setattr(labels.time, "sleep", lambda *_: None)
     svc = FakeGmailService()
-    svc.abort_remaining = 2
+    svc.abort_remaining = 4  # succeeds on the 5th attempt, within the budget of 6
     label_id = labels.create_label(svc, "Sentinel/Quarantine")
     assert label_id
-    assert svc.create_count == 3  # 2 aborted attempts + 1 success
+    assert svc.create_count == 5
     assert any(x["name"] == "Sentinel/Quarantine" for x in svc.labels_store)
 
 
-def test_create_label_gives_up_after_repeated_aborts(app):
+def test_create_label_gives_up_after_repeated_aborts(app, monkeypatch):
     from integrations.gmail.exceptions import GmailRetryableError
 
+    monkeypatch.setattr(labels.time, "sleep", lambda *_: None)
     svc = FakeGmailService()
-    svc.abort_remaining = 10  # never succeeds within the retry budget
+    svc.abort_remaining = 20  # never succeeds within the retry budget
     with pytest.raises(GmailRetryableError):
         labels.create_label(svc, "Sentinel/Quarantine")
+    assert svc.create_count == 6  # max_attempts, then gives up

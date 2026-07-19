@@ -70,6 +70,7 @@ def create_label(service, name: str) -> str:
         "messageListVisibility": "show",
     }
     attempts = 0
+    max_attempts = 6
     while True:
         attempts += 1
         try:
@@ -78,9 +79,13 @@ def create_label(service, name: str) -> str:
             )
             return created["id"]
         except client.GmailRetryableError:
-            if attempts >= 3:
+            if attempts >= max_attempts:
                 raise
-            time.sleep(0.4 * attempts)
+            # Exponential backoff capped at 3s -- a single "aborted" retry
+            # wasn't enough in practice for a brand-new label hierarchy
+            # (parent + 4 children created back-to-back), so this budgets
+            # up to ~9s total rather than assume a quick race.
+            time.sleep(min(0.5 * (2 ** (attempts - 1)), 3.0))
         except client.GmailPermanentError:
             existing = find_label_id(service, name)
             if existing:
