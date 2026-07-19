@@ -39,7 +39,15 @@ from flask_wtf.csrf import generate_csrf
 from werkzeug.security import generate_password_hash
 
 from extensions import db, csrf, limiter
-from models import Scan, Feedback, ModelVersion, AuditLog, User, MailboxStatus
+from models import (
+    Scan,
+    Feedback,
+    ModelVersion,
+    AuditLog,
+    User,
+    MailboxStatus,
+    GmailConnection,
+)
 from auth import (
     verify_login,
     login_required,
@@ -923,6 +931,47 @@ def submit_feedback():
     return jsonify(scan.to_dict())
 
 
+def _apply_gmail_mailbox_action(scan, which):
+    """Apply a real Gmail label change (quarantine or release) for a
+    Gmail-sourced scan, mirroring the existing legacy-IMAP release branch's
+    structure below. No-ops silently for any other source -- this is purely
+    additive to admin_action()'s existing behaviour, never a replacement.
+
+    Never raises: a Gmail failure is recorded onto
+    scan.mailbox_action_error and scan.mailbox_action is left exactly as it
+    was, so a failed API call can never be mistaken for a successful one.
+    Only a genuine success updates mailbox_action -- matching the project's
+    own rule (see docs/frontend direction) that mailbox state must never be
+    reported as changed unless it actually was.
+    """
+    if (
+        scan.source != "gmail"
+        or not scan.gmail_connection_id
+        or not scan.gmail_message_id
+    ):
+        return
+
+    conn = db.session.get(GmailConnection, scan.gmail_connection_id)
+    if not conn:
+        scan.mailbox_action_error = "Gmail connection no longer available"
+        return
+
+    from integrations.gmail import client as gmail_client, messages as gmail_messages
+    from integrations.gmail.exceptions import GmailError
+
+    try:
+        service = gmail_client.build_service(conn)
+        if which == "quarantine":
+            gmail_messages.quarantine(service, scan.gmail_message_id, conn)
+            scan.mailbox_action = "quarantined"
+        elif which == "release":
+            gmail_messages.release(service, scan.gmail_message_id, conn)
+            scan.mailbox_action = "none"
+        scan.mailbox_action_error = None
+    except GmailError as e:
+        scan.mailbox_action_error = f"{type(e).__name__}: {e}"
+
+
 @app.post("/api/admin/action")
 @admin_required
 def admin_action():
@@ -966,6 +1015,12 @@ def admin_action():
                     scan.notes += " (moved back to inbox)"
                 except MailboxError as e:
                     scan.mailbox_action_error = f"Release-to-inbox failed: {e}"
+
+        # Same idea for a real connected Gmail mailbox -- without this,
+        # "release" was only ever true in Sentinel's own database, not in
+        # the actual Gmail account, and the message would stay hidden from
+        # the inbox indefinitely.
+        _apply_gmail_mailbox_action(scan, "release")
     elif action == "confirm":
         scan.notes = "Confirmed phishing by admin"
         fb = Feedback(
@@ -978,6 +1033,14 @@ def admin_action():
         scan.user_feedback = "Phishing"
         scan.classification = "Phishing"
         scan.risk_level = risk_for("Phishing")
+
+        # Apply the real Gmail quarantine label too -- confirming phishing
+        # on a message that arrived as Needs Review (so was never actually
+        # quarantined) previously only updated Sentinel's own verdict,
+        # leaving the real message sitting untouched in the inbox. Safe to
+        # call even if it's already quarantined -- Gmail's label modify is
+        # idempotent (see integrations/gmail/messages.py).
+        _apply_gmail_mailbox_action(scan, "quarantine")
     elif action == "escalate":
         scan.notes = "Escalated for further investigation"
     else:
