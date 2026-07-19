@@ -99,6 +99,12 @@ def test_feedback_flow_marks_scan_and_creates_unused_feedback_row(user_client):
     assert resp.status_code == 200
     updated = resp.get_json()
     assert updated["user_feedback"] == "Phishing"
+    # The correction must change the verdict itself, not just annotate it --
+    # otherwise a queue that filters on classification (Needs Review, the
+    # Detections verdict badge) never reflects it and the item is stuck
+    # showing its original, now-superseded verdict forever.
+    assert updated["classification"] == "Phishing"
+    assert updated["risk_level"] == "High"
 
     from models import Feedback
     from app import app as flask_app
@@ -108,6 +114,9 @@ def test_feedback_flow_marks_scan_and_creates_unused_feedback_row(user_client):
         assert fb is not None
         assert fb.corrected_label == "Phishing"
         assert fb.used_in_retrain is False
+        # Feedback.original_label preserves the model's own original call
+        # even though scan.classification has now moved on.
+        assert fb.original_label == scan["classification"]
 
 
 def test_feedback_rejects_invalid_label(user_client):

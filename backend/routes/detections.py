@@ -36,6 +36,18 @@ def _sender_domain(sender: str) -> str:
     return m.group(1) if m else ""
 
 
+def _risk_for(label):
+    """Mirrors app.py's risk_for() -- duplicated rather than imported to
+    avoid a circular import (app.py imports this blueprint, not the other
+    way around). Keeps a reviewed report's risk badge consistent with its
+    corrected verdict."""
+    if label == "Phishing":
+        return "High"
+    if label == "Needs Review":
+        return "Medium"
+    return "Low"
+
+
 # ---------------------------------------------------------------------------
 # reported-email queue + review
 # ---------------------------------------------------------------------------
@@ -82,6 +94,12 @@ def review_report(report_id):
             )
         )
         scan.user_feedback = verdict
+        # Same fix as app.py's submit_feedback()/admin_action(): a review
+        # decision must change the verdict itself, not just annotate it, or
+        # the underlying detection never leaves Needs Review / reflects the
+        # correction anywhere that filters or displays classification.
+        scan.classification = verdict
+        scan.risk_level = _risk_for(verdict)
     db.session.commit()
 
     log_action(

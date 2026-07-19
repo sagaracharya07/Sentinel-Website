@@ -415,6 +415,19 @@ def status_for(label):
     return "Delivered"
 
 
+def risk_for(label):
+    """Risk badge matching a classification label -- mirrors
+    ml/infer.decide()'s own label->risk mapping, kept here so a human
+    review decision (confirm/release/feedback) that changes the
+    classification updates the risk badge consistently with it, instead of
+    leaving a stale risk level next to a corrected verdict."""
+    if label == "Phishing":
+        return "High"
+    if label == "Needs Review":
+        return "Medium"
+    return "Low"
+
+
 def purge_old_bodies():
     """FR-DB-05: minimise/anonymise sensitive content in storage. Real
     background job (not just a claim in the docs) that redacts email
@@ -889,14 +902,23 @@ def submit_feedback():
         submitted_by=current_actor(),
     )
     db.session.add(fb)
+    original_classification = scan.classification
     scan.user_feedback = corrected_label
     scan.notes = f"User corrected to: {corrected_label}"
+    # A correction must actually change the verdict, not just annotate it --
+    # otherwise queue views that filter on classification (Needs Review,
+    # Detections' verdict badge, Analytics) never reflect the correction and
+    # the item is stuck showing its original, now-superseded verdict
+    # forever. Feedback.original_label above already preserves what the
+    # model originally said, so this doesn't lose that history.
+    scan.classification = corrected_label
+    scan.risk_level = risk_for(corrected_label)
     db.session.commit()
     log_action(
         current_actor(),
         "feedback_submitted",
         target=scan_id,
-        details=f"{scan.classification} -> {corrected_label}",
+        details=f"{original_classification} -> {corrected_label}",
     )
     return jsonify(scan.to_dict())
 
@@ -922,6 +944,12 @@ def admin_action():
         )
         db.session.add(fb)
         scan.user_feedback = "Legitimate"
+        # See submit_feedback()'s comment: a review decision must change the
+        # verdict itself, not just annotate it, or the item never leaves
+        # Needs Review / Quarantine and the Detections verdict badge stays
+        # stale.
+        scan.classification = "Legitimate"
+        scan.risk_level = risk_for("Legitimate")
 
         # If this came from the real mailbox and was actually quarantined
         # there, move it back to the inbox for real -- otherwise "release"
@@ -948,6 +976,8 @@ def admin_action():
         )
         db.session.add(fb)
         scan.user_feedback = "Phishing"
+        scan.classification = "Phishing"
+        scan.risk_level = risk_for("Phishing")
     elif action == "escalate":
         scan.notes = "Escalated for further investigation"
     else:

@@ -108,6 +108,58 @@ def test_needs_review_list(admin_client, app):
     assert {r["scan_id"] for r in rows} == {"SCN-NR"}
 
 
+def test_marking_legitimate_clears_needs_review_queue(admin_client, app):
+    # Reproduces the reported bug: /api/feedback used to only annotate
+    # user_feedback without ever changing classification, so an item marked
+    # Legitimate from the Needs Review queue stayed showing there forever
+    # (the queue filters on classification, not user_feedback).
+    _seed(
+        app,
+        [
+            _scan(
+                "SCN-NR",
+                classification="Needs Review",
+                status="Flagged",
+                mailbox_action="needs_review",
+            ),
+        ],
+    )
+    before = admin_client.get("/api/admin/detections/needs-review").get_json()
+    assert {r["scan_id"] for r in before} == {"SCN-NR"}
+
+    resp = admin_client.post(
+        "/api/feedback", json={"scan_id": "SCN-NR", "corrected_label": "Legitimate"}
+    )
+    assert resp.status_code == 200
+    assert resp.get_json()["classification"] == "Legitimate"
+
+    after = admin_client.get("/api/admin/detections/needs-review").get_json()
+    assert after == []
+
+
+def test_confirming_phishing_clears_needs_review_queue(admin_client, app):
+    _seed(
+        app,
+        [
+            _scan(
+                "SCN-NR2",
+                classification="Needs Review",
+                status="Flagged",
+                mailbox_action="needs_review",
+            ),
+        ],
+    )
+    resp = admin_client.post(
+        "/api/admin/action", json={"scan_id": "SCN-NR2", "action": "confirm"}
+    )
+    assert resp.status_code == 200
+    assert resp.get_json()["classification"] == "Phishing"
+    assert resp.get_json()["risk_level"] == "High"
+
+    after = admin_client.get("/api/admin/detections/needs-review").get_json()
+    assert after == []
+
+
 # --- incident detail + related ----------------------------------------------
 def test_incident_detail_includes_timeline_and_related(admin_client, app):
     _seed(
@@ -192,6 +244,11 @@ def test_review_report_sets_verdict_and_feedback(admin_client, app):
     assert body["status"] == "reviewed"
     assert body["admin_verdict"] == "Phishing"
     assert body["reviewed_by"] == "test_admin"
+    # The underlying scan's own verdict must move too, not just the report's
+    # admin_verdict annotation -- see the two tests above for the same fix
+    # on /api/feedback and /api/admin/action.
+    assert body["scan"]["classification"] == "Phishing"
+    assert body["scan"]["risk_level"] == "High"
     with app.app_context():
         assert (
             Feedback.query.filter_by(
@@ -199,6 +256,22 @@ def test_review_report_sets_verdict_and_feedback(admin_client, app):
             ).count()
             == 1
         )
+
+
+def test_reviewing_report_clears_needs_review_queue(admin_client, app):
+    # _make_report()'s scan starts life as classification="Needs Review" --
+    # reviewing it must remove it from that queue, not leave it stuck there
+    # showing a verdict the admin already overrode.
+    rid = _make_report(app)
+    before = admin_client.get("/api/admin/detections/needs-review").get_json()
+    assert {r["scan_id"] for r in before} == {"SCN-R1"}
+
+    admin_client.post(
+        f"/api/admin/reports/{rid}/review", json={"verdict": "Legitimate"}
+    )
+
+    after = admin_client.get("/api/admin/detections/needs-review").get_json()
+    assert after == []
 
 
 def test_review_rejects_invalid_verdict(admin_client, app):
