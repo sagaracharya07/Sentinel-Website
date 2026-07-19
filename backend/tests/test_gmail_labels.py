@@ -1,5 +1,7 @@
 """Gmail label management: create-all, idempotency, duplicate prevention."""
 
+import pytest
+
 from extensions import db
 from models import GmailConnection
 from integrations.gmail import labels
@@ -56,3 +58,25 @@ def test_find_label_id(app):
     svc = FakeGmailService(labels=[{"id": "LBL-1", "name": "Sentinel/Processed"}])
     assert labels.find_label_id(svc, "Sentinel/Processed") == "LBL-1"
     assert labels.find_label_id(svc, "Nonexistent") is None
+
+
+def test_create_label_retries_on_aborted_then_succeeds(app):
+    # Gmail's 409 "aborted" means nothing was created -- re-reading (as the
+    # 409 "alreadyExists" case does) would find nothing, so this must retry
+    # the creation itself. Seen in practice creating several labels in quick
+    # succession right after a brand-new OAuth grant.
+    svc = FakeGmailService()
+    svc.abort_remaining = 2
+    label_id = labels.create_label(svc, "Sentinel/Quarantine")
+    assert label_id
+    assert svc.create_count == 3  # 2 aborted attempts + 1 success
+    assert any(x["name"] == "Sentinel/Quarantine" for x in svc.labels_store)
+
+
+def test_create_label_gives_up_after_repeated_aborts(app):
+    from integrations.gmail.exceptions import GmailRetryableError
+
+    svc = FakeGmailService()
+    svc.abort_remaining = 10  # never succeeds within the retry budget
+    with pytest.raises(GmailRetryableError):
+        labels.create_label(svc, "Sentinel/Quarantine")

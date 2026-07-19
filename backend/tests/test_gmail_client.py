@@ -127,6 +127,8 @@ def test_build_credentials_requires_client_config(app, monkeypatch):
         (403, "userRateLimitExceeded", GmailRetryableError),
         (403, "insufficientPermissions", GmailPermanentError),
         (429, "", GmailRetryableError),
+        (409, "aborted", GmailRetryableError),
+        (409, "alreadyExists", GmailPermanentError),
         (500, "", GmailRetryableError),
         (503, "", GmailRetryableError),
         (404, "notFound", GmailNotFoundError),

@@ -15,6 +15,7 @@ a create that races another (409) falls back to re-reading the list, so we
 never create two labels with the same name.
 """
 
+import time
 import logging
 
 from . import client
@@ -52,25 +53,39 @@ def find_label_id(service, name: str):
 
 
 def create_label(service, name: str) -> str:
-    """Create one label, returning its id. Idempotent against a concurrent
-    create: if the API rejects it as already-existing, we re-read and return
-    the existing id rather than failing."""
+    """Create one label, returning its id.
+
+    Two distinct failure modes, handled differently:
+      - GmailPermanentError (409 "alreadyExists"): another request already
+        created it -- nothing to retry, re-read and reuse the existing id.
+      - GmailRetryableError (409 "aborted", rate limit, 5xx): nothing was
+        actually created, so re-reading would find nothing -- retry the
+        creation itself a few times with a short backoff. Seen in practice
+        creating several Sentinel labels in quick succession right after a
+        brand-new OAuth grant.
+    """
     body = {
         "name": name,
         "labelListVisibility": "labelShow",
         "messageListVisibility": "show",
     }
-    try:
-        created = client.execute(
-            service.users().labels().create(userId="me", body=body)
-        )
-        return created["id"]
-    except client.GmailPermanentError:
-        # Most likely a 409 "label exists" race -- re-read and use it.
-        existing = find_label_id(service, name)
-        if existing:
-            return existing
-        raise
+    attempts = 0
+    while True:
+        attempts += 1
+        try:
+            created = client.execute(
+                service.users().labels().create(userId="me", body=body)
+            )
+            return created["id"]
+        except client.GmailRetryableError:
+            if attempts >= 3:
+                raise
+            time.sleep(0.4 * attempts)
+        except client.GmailPermanentError:
+            existing = find_label_id(service, name)
+            if existing:
+                return existing
+            raise
 
 
 def ensure_sentinel_labels(service, conn) -> dict:

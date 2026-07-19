@@ -132,6 +132,9 @@ class _LabelsApi:
         def do():
             self.s.create_count += 1
             name = body["name"]
+            if self.s.abort_remaining > 0:
+                self.s.abort_remaining -= 1
+                raise make_http_error(409, "aborted", "concurrent modification")
             exists = any(x["name"] == name for x in self.s.labels_store)
             if exists or self.s.force_create_conflict:
                 raise make_http_error(409, "alreadyExists", "Label name exists")
@@ -217,6 +220,7 @@ class FakeGmailService:
         self.history_store = list(history or [])
         self.history_expired = False
         self.force_create_conflict = False
+        self.abort_remaining = 0  # next N label creates raise 409 "aborted"
         self.get_raises = {}  # message_id -> exception to raise on get()
         self.modify_calls = []
         self.create_count = 0

@@ -147,6 +147,16 @@ def classify_http_error(error: HttpError) -> Exception:
         return GmailRetryableError("Gmail rate limit hit (403).")
     if status == 429:
         return GmailRetryableError("Gmail rate limit hit (429).")
+    if status == 409 and reason == "aborted":
+        # Distinct from a 409 "alreadyExists" conflict (a genuine permanent
+        # state, handled by callers re-reading and reusing what's there --
+        # see labels.py's create_label). "aborted" is Gmail's own signal
+        # that a concurrent/rapid modification should be retried; nothing
+        # was actually created, so treating it as permanent would make the
+        # caller give up on a label that was never made. Seen in practice
+        # creating several Sentinel labels in quick succession right after
+        # a brand-new OAuth grant.
+        return GmailRetryableError("Gmail request aborted, safe to retry (409).")
     if status is not None and 500 <= status < 600:
         return GmailRetryableError(f"Gmail transient server error ({status}).")
     if status == 404:
