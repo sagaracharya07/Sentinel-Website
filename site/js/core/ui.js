@@ -24,7 +24,7 @@
       document.body.appendChild(region);
     }
     const el = document.createElement('div');
-    el.className = 'toast ' + (kind === 'err' ? 'err' : kind === 'ok' ? 'ok' : '');
+    el.className = 'toast ' + (kind === 'err' ? 'err' : kind === 'warn' ? 'warn' : kind === 'ok' ? 'ok' : '');
     el.setAttribute('role', 'status');
     el.innerHTML = '<span class="dot"></span><span></span>';
     el.querySelector('span:last-child').textContent = message;

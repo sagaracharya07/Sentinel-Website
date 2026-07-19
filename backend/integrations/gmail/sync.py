@@ -179,6 +179,8 @@ def _do_sync(conn, log_action) -> dict:
         conn.last_error_code = type(e).__name__
         conn.last_error_message = str(e)
         db.session.commit()
+        if log_action:
+            log_action("system", "gmail_sync_failed", details=type(e).__name__)
         summary["error"] = type(e).__name__
         return summary
 

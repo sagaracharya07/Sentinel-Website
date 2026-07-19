@@ -46,6 +46,26 @@ def test_to_dict_never_exposes_tokens(app):
         assert d["mailbox_email"] == "ops@example.com"
 
 
+def test_to_dict_exposes_sync_lock_state(app):
+    # Not a secret, and needed so a stuck Test Connection/Scan Now can
+    # actually be diagnosed from the admin console instead of guessed at.
+    cid = _make(app)
+    with app.app_context():
+        c = db.session.get(GmailConnection, cid)
+        d = c.to_dict()
+        assert d["sync_in_progress"] is False
+        assert d["sync_lock_acquired_at"] is None
+
+        c.sync_in_progress = True
+        c.sync_lock_acquired_at = datetime(2026, 1, 1, tzinfo=timezone.utc).replace(
+            tzinfo=None
+        )
+        db.session.commit()
+        d2 = c.to_dict()
+        assert d2["sync_in_progress"] is True
+        assert d2["sync_lock_acquired_at"] is not None
+
+
 def test_active_returns_only_non_disconnected(app):
     _make(app, email="a@example.com", status=GMAIL_STATUS_CONNECTED)
     with app.app_context():

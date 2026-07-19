@@ -163,9 +163,11 @@ textarea { min-height: 160px; resize: vertical; line-height: 1.55; }
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast.ok   { border-color: rgba(34,211,166,.5); }
 .toast.err  { border-color: rgba(255,77,94,.5); }
+.toast.warn { border-color: rgba(255,176,32,.5); }
 .toast .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .toast.ok .dot { background: var(--green); }
 .toast.err .dot { background: var(--red); }
+.toast.warn .dot { background: var(--amber); }
 
 /* ---- Modal / dialog ----------------------------------------------------- */
 .modal-backdrop {

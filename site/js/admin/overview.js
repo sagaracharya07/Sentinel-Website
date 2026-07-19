@@ -151,7 +151,8 @@
     btn.disabled = true;
     try {
       const res = await SentinelAPI.gmailScanNow();
-      toast('Scan complete: ' + (res.new_detections ?? res.new ?? 0) + ' new', 'ok');
+      const d = A.describeSyncResult(res);
+      toast(d.message, d.kind);
       loadMetrics(); loadFeed(); A.refreshSidebarCounts();
     } catch (err) {
       toast(err.status === 404 ? 'No mailbox connected' : ('Scan failed: ' + err.message), 'err');

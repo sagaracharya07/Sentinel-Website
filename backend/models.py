@@ -480,6 +480,13 @@ class GmailConnection(db.Model):
             else None,
             "last_error_code": self.last_error_code,
             "last_error_message": self.last_error_message,
+            # Not a secret, and genuinely useful for diagnosing "Test
+            # Connection / Scan Now does nothing" reports -- there was no
+            # way to see this from the admin console before.
+            "sync_in_progress": self.sync_in_progress,
+            "sync_lock_acquired_at": self.sync_lock_acquired_at.isoformat()
+            if self.sync_lock_acquired_at
+            else None,
             "labels_ready": all(
                 [
                     self.processed_label_id,

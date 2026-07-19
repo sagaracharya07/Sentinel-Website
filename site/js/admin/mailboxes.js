@@ -92,7 +92,8 @@
         toast(r.ok ? 'Connection OK: ' + (r.email || '') : ('Test failed: ' + (r.error || '')), r.ok ? 'ok' : 'err');
       } else if (kind === 'scan') {
         const r = await SentinelAPI.gmailScanNow();
-        toast('Scan complete: ' + (r.new_detections ?? r.new ?? 0) + ' new', 'ok');
+        const d = A.describeSyncResult(r);
+        toast(d.message, d.kind);
         A.refreshSidebarCounts();
       } else if (kind === 'pause') { await SentinelAPI.gmailPause(); toast('Protection paused', 'ok'); }
       else if (kind === 'resume') { await SentinelAPI.gmailResume(); toast('Protection resumed', 'ok'); }

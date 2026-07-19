@@ -4,6 +4,7 @@
 (function () {
   'use strict';
   const { esc, toast, relTime, setState } = window.SentinelUI;
+  const A = window.AdminUI;
 
   const celeryEl = document.getElementById('celeryPanel');
   const gmailEl = document.getElementById('gmailPanel');
@@ -44,7 +45,8 @@
     btn.disabled = true;
     try {
       const r = await SentinelAPI.gmailScanNow();
-      toast('Sync triggered: ' + (r.new_detections ?? r.new ?? 0) + ' new', 'ok');
+      const d = A.describeSyncResult(r);
+      toast(d.message, d.kind);
       load();
     } catch (err) {
       toast(err.status === 404 ? 'No mailbox connected' : 'Trigger failed: ' + err.message, 'err');

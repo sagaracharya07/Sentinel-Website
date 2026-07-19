@@ -118,6 +118,32 @@
     }
   }
 
+  /* ---- Gmail sync result -> a toast the user can actually trust --------- */
+  /* SentinelAPI.gmailScanNow() resolves to the raw summary dict from
+     sync.sync_connection() (integrations/gmail/sync.py). Three distinct
+     shapes, previously not distinguished at any call site -- every one of
+     them showed a generic "Scan complete: 0 new" regardless of what
+     actually happened (partly because the field name checked, `new` /
+     `new_detections`, doesn't exist on the response at all; the real field
+     is `new_messages`):
+       { ran: false, reason: "sync_already_in_progress" }  -- another sync
+         (Beat, or a concurrent click) holds the per-connection lock.
+       { ran: true, error: "GmailRetryableError", ... }    -- the sync
+         started but failed before processing any mail (e.g. label setup).
+       { ran: true, new_messages: N, ... }                  -- genuine result. */
+  function describeSyncResult(r) {
+    if (!r.ran) {
+      if (r.reason === 'sync_already_in_progress') {
+        return { kind: 'warn', message: 'A Gmail sync is already running — try again shortly.' };
+      }
+      return { kind: 'warn', message: 'Sync did not run (' + (r.reason || 'unknown reason') + ').' };
+    }
+    if (r.error) {
+      return { kind: 'err', message: 'Sync failed: ' + r.error };
+    }
+    return { kind: 'ok', message: 'Scan complete: ' + (r.new_messages ?? 0) + ' new' };
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     refreshSidebarCounts();
     refreshProtectionPill();
@@ -134,5 +160,6 @@
   window.AdminUI = {
     verdictBadge, riskBadge, statusBadge, sourceLabel, pct,
     normFinding, findingHtml, refreshSidebarCounts, refreshProtectionPill,
+    describeSyncResult,
   };
 })();

@@ -270,3 +270,35 @@ def test_run_active_sync_no_connection(app):
         result = sync.run_active_sync()
         assert result["ran"] is False
         assert result["reason"] == "no_active_connection"
+
+
+def test_label_setup_failure_is_recorded_and_audited(app, patched, monkeypatch):
+    # A failure during ensure_sentinel_labels() (called before any message
+    # processing) must be visible in both the connection's own error fields
+    # AND the audit log -- previously this generic-GmailError branch set
+    # last_error_code/message but never called log_action, so a failed sync
+    # left no audit trail at all (only the GmailAuthError/GmailConfigError
+    # branch did).
+    cid = _conn(app)
+    svc = FakeGmailService()
+    svc.force_create_conflict = (
+        True  # every label create 409s, and never actually exists
+    )
+    _use_service(monkeypatch, svc)
+
+    logged = []
+
+    def log_action(actor, action, target="", details=""):
+        logged.append((actor, action, target, details))
+
+    with app.app_context():
+        conn = db.session.get(GmailConnection, cid)
+        summary = sync.sync_connection(conn, log_action=log_action)
+        assert summary["ran"] is True
+        assert summary["error"] == "GmailPermanentError"
+
+        conn = db.session.get(GmailConnection, cid)
+        assert conn.last_error_code == "GmailPermanentError"
+        assert conn.last_error_message
+
+    assert any(entry[1] == "gmail_sync_failed" for entry in logged)
