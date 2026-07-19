@@ -70,7 +70,11 @@
 
   async function render() {
     const rows = allRows.filter(withinRange);
-    const quarantined = rows.filter((r) => r.status === 'Quarantined').length;
+    // Only gmail/mailbox sources ever have a real mailbox quarantine action --
+    // Quick Analysis/.eml uploads get the same status string from their
+    // classification label alone, with nothing actually moved. Mirrors the
+    // same source filter as /api/stats's quarantined count (app.py).
+    const quarantined = rows.filter((r) => r.status === 'Quarantined' && (r.source === 'gmail' || r.source === 'mailbox')).length;
     const released = rows.filter((r) => (r.notes || '').startsWith('Released by admin')).length;
     const reported = rows.filter((r) => r.source === 'upload').length;
     const automatic = rows.length - reported;

@@ -40,6 +40,16 @@
   };
   function sourceLabel(s) { return SOURCE_LABEL[s] || s || '—'; }
 
+  /* Operational status for a detection row. `status` (Quarantined/Flagged/
+     Delivered) is only a real mailbox fact for gmail/mailbox sources -- Quick
+     Analysis and .eml uploads get the same string from their classification
+     label alone, with nothing ever actually moved anywhere, so showing
+     "Quarantined" for them overstates what happened. */
+  function operationalStatus(row) {
+    if (row.source === 'gmail' || row.source === 'mailbox') return row.status || '—';
+    return 'Analysed';
+  }
+
   /* 0..1 float -> "87%" */
   function pct(x) {
     if (x === null || x === undefined || isNaN(x)) return '—';
@@ -158,7 +168,7 @@
   });
 
   window.AdminUI = {
-    verdictBadge, riskBadge, statusBadge, sourceLabel, pct,
+    verdictBadge, riskBadge, statusBadge, sourceLabel, operationalStatus, pct,
     normFinding, findingHtml, refreshSidebarCounts, refreshProtectionPill,
     describeSyncResult,
   };

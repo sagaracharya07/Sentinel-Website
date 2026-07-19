@@ -272,6 +272,13 @@ def test_connection():
             details=type(e).__name__,
         )
         return jsonify({"ok": False, "error": _safe_error(e)}), 200
+    # A genuinely successful test clears any previously stored error --
+    # otherwise a stale failure from an earlier test keeps showing after the
+    # connection is fixed. Only the success path clears it: a failed or
+    # partial test above already stores its own error instead.
+    conn.last_error_code = None
+    conn.last_error_message = None
+    db.session.commit()
     log_action(current_actor(), "gmail_test", target=conn.mailbox_email)
     return jsonify(
         {

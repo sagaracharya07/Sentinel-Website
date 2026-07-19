@@ -356,6 +356,7 @@ def _insert_scan(
     prediction_confidence,
     classification="Legitimate",
     status="Delivered",
+    source="manual",
 ):
     from models import Scan
     from extensions import db
@@ -372,6 +373,7 @@ def _insert_scan(
                 prediction_confidence=prediction_confidence,
                 status=status,
                 created_by=created_by,
+                source=source,
             )
         )
         db.session.commit()
@@ -386,6 +388,7 @@ def test_stats_pending_review_counts_quarantined_and_flagged_only(admin_client, 
         prediction_confidence=0.9,
         classification="Phishing",
         status="Quarantined",
+        source="gmail",
     )
     _insert_scan(
         app,
@@ -395,6 +398,7 @@ def test_stats_pending_review_counts_quarantined_and_flagged_only(admin_client, 
         prediction_confidence=0.6,
         classification="Needs Review",
         status="Flagged",
+        source="gmail",
     )
     _insert_scan(
         app,
@@ -408,6 +412,46 @@ def test_stats_pending_review_counts_quarantined_and_flagged_only(admin_client, 
 
     stats = admin_client.get("/api/stats").get_json()
     assert stats["pending_review"] == 2
+
+
+def test_stats_quarantined_excludes_quick_analysis_and_uploads(admin_client, app):
+    # Quick Analysis ('manual') and .eml uploads ('upload') can carry
+    # status='Quarantined'/'Flagged' purely from their classification label --
+    # no real mailbox exists for either, so nothing was ever actually moved.
+    # /api/stats must not count them as if a real mailbox action happened.
+    _insert_scan(
+        app,
+        "SCN-REAL",
+        "test_admin",
+        confidence_score=0.9,
+        prediction_confidence=0.9,
+        classification="Phishing",
+        status="Quarantined",
+        source="gmail",
+    )
+    _insert_scan(
+        app,
+        "SCN-FAKE-MANUAL",
+        "test_admin",
+        confidence_score=0.9,
+        prediction_confidence=0.9,
+        classification="Phishing",
+        status="Quarantined",
+        source="manual",
+    )
+    _insert_scan(
+        app,
+        "SCN-FAKE-UPLOAD",
+        "test_admin",
+        confidence_score=0.9,
+        prediction_confidence=0.9,
+        classification="Phishing",
+        status="Quarantined",
+        source="upload",
+    )
+
+    stats = admin_client.get("/api/stats").get_json()
+    assert stats["quarantined"] == 1
 
 
 def test_avg_stats_distinguish_probability_from_confidence_for_legitimate_scan(

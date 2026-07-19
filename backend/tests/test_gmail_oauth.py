@@ -311,6 +311,50 @@ def test_test_connection_auth_failure_is_safe(admin_client, app, monkeypatch):
     )  # internals not leaked
 
 
+def test_test_connection_clears_stale_error_on_success(admin_client, app, monkeypatch):
+    """A failed test stores an error; a later successful test must clear it --
+    otherwise the UI keeps showing a stale failure after the mailbox is
+    actually fixed."""
+    from tests.gmail_fakes import FakeGmailService
+    from integrations.gmail import client as client_mod
+    from integrations.gmail.exceptions import GmailAuthError
+    from models import GmailConnection
+
+    _connect(admin_client, monkeypatch, email="tester@corp.example")
+
+    def boom(conn):
+        raise GmailAuthError("invalid_grant details")
+
+    monkeypatch.setattr(client_mod, "build_service", boom)
+    r = admin_client.post("/api/admin/gmail/test")
+    assert r.get_json()["ok"] is False
+    with app.app_context():
+        conn = GmailConnection.active()
+        assert conn.last_error_code == "GmailAuthError"
+        assert conn.last_error_message
+
+    svc = FakeGmailService(
+        profile={"emailAddress": "tester@corp.example", "messagesTotal": 1}
+    )
+    monkeypatch.setattr(client_mod, "build_service", lambda conn: svc)
+    r = admin_client.post("/api/admin/gmail/test")
+    assert r.get_json()["ok"] is True
+    with app.app_context():
+        conn = GmailConnection.active()
+        assert conn.last_error_code is None
+        assert conn.last_error_message is None
+
+    # A failed retry after a success must store the new error again, not
+    # leave the record looking clean.
+    monkeypatch.setattr(client_mod, "build_service", boom)
+    r = admin_client.post("/api/admin/gmail/test")
+    assert r.get_json()["ok"] is False
+    with app.app_context():
+        conn = GmailConnection.active()
+        assert conn.last_error_code == "GmailAuthError"
+        assert conn.last_error_message
+
+
 def test_only_one_active_connection(admin_client, app, monkeypatch):
     # Connect account A, then account B: A must be auto-disconnected.
     _connect(admin_client, monkeypatch, email="first@corp.example")

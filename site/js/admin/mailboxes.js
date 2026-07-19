@@ -45,10 +45,22 @@
       if (cb) cb.addEventListener('click', connect);
       return;
     }
-    const active = c.connection_status === 'connected' && c.protection_enabled;
-    dot.className = 'status-dot ' + (active ? 'ok' : c.connection_status === 'paused' ? 'warn' : 'bad');
-    pill.className = 'badge ' + (active ? 'badge-legit' : c.connection_status === 'paused' ? 'badge-review' : 'badge-phish');
-    pill.textContent = active ? 'Protection active' : (c.connection_status === 'paused' ? 'Paused' : c.connection_status);
+    // "Protection active" used to mean only connected+enabled, which could
+    // claim protection while required labels were never set up or the last
+    // Gmail call actually failed. Fold in labels_ready/last_error_code (both
+    // already tracked on the connection) so the badge can't overstate health.
+    const state = protectionState(c);
+    const STATE_STYLE = {
+      active: { dot: 'ok', badge: 'badge-legit', text: 'Protection active' },
+      setup_incomplete: { dot: 'warn', badge: 'badge-review', text: 'Setup incomplete' },
+      degraded: { dot: 'warn', badge: 'badge-review', text: 'Degraded' },
+      paused: { dot: 'warn', badge: 'badge-review', text: 'Paused' },
+      disconnected: { dot: 'bad', badge: 'badge-phish', text: c.connection_status },
+    };
+    const s = STATE_STYLE[state];
+    dot.className = 'status-dot ' + s.dot;
+    pill.className = 'badge ' + s.badge;
+    pill.textContent = s.text;
 
     panel.innerHTML =
       '<dl class="kv" style="grid-template-columns:150px 1fr;gap:8px 16px">' +
@@ -73,6 +85,14 @@
     panel.querySelectorAll('[data-op]').forEach((b) => b.addEventListener('click', () => op(b)));
   }
   function row(k, v) { return '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>'; }
+
+  function protectionState(c) {
+    if (c.connection_status === 'paused') return 'paused';
+    if (c.connection_status !== 'connected') return 'disconnected';
+    if (!c.labels_ready) return 'setup_incomplete';
+    if (c.last_error_code) return 'degraded';
+    return 'active';
+  }
 
   /* ---- operations ------------------------------------------------------- */
   async function connect() {

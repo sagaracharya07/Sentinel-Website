@@ -843,8 +843,20 @@ def stats():
     phishing = sum(1 for s in scans if s.classification == "Phishing")
     needs_review = sum(1 for s in scans if s.classification == "Needs Review")
     legitimate = total - phishing - needs_review
-    quarantined = sum(1 for s in scans if s.status == "Quarantined")
-    flagged = sum(1 for s in scans if s.status == "Flagged")
+    # Quarantined/flagged counts are an *operational mailbox* fact -- only
+    # meaningful for sources with a real mailbox (gmail/mailbox). Quick
+    # Analysis ('manual') and .eml uploads ('upload') get the same status
+    # string from their classification label, but nothing was ever actually
+    # moved anywhere for them, so counting those in would overstate how many
+    # real messages are sitting quarantined/flagged in a live mailbox.
+    quarantined = sum(
+        1
+        for s in scans
+        if s.status == "Quarantined" and s.source in ("gmail", "mailbox")
+    )
+    flagged = sum(
+        1 for s in scans if s.status == "Flagged" and s.source in ("gmail", "mailbox")
+    )
 
     # Two distinct numbers, not one ambiguous "avg_confidence": phishing
     # probability (raw model output) and prediction confidence (how sure

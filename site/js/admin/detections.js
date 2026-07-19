@@ -43,7 +43,7 @@
         '<td data-label="Phishing prob." class="mono">' + A.pct(r.phishing_probability) + '</td>' +
         '<td data-label="Verdict">' + A.verdictBadge(r.classification) + '</td>' +
         '<td data-label="Risk">' + A.riskBadge(r.risk_level) + '</td>' +
-        '<td data-label="Status">' + esc(r.status || '—') + '</td>' +
+        '<td data-label="Status">' + esc(A.operationalStatus(r)) + '</td>' +
         '<td data-label="Source" class="muted">' + esc(A.sourceLabel(r.source)) + '</td></tr>'
       ).join('') + '</tbody></table></div>';
     els.body.querySelectorAll('tr[data-href]').forEach((tr) => {
