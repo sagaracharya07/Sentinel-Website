@@ -19,6 +19,7 @@ import time
 import logging
 
 from . import client
+from .exceptions import GmailError
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ def create_label(service, name: str) -> str:
         "messageListVisibility": "show",
     }
     attempts = 0
-    max_attempts = 6
+    max_attempts = 3
     while True:
         attempts += 1
         try:
@@ -97,20 +98,40 @@ def create_label(service, name: str) -> str:
 def ensure_sentinel_labels(service, conn) -> dict:
     """Ensure all Sentinel labels exist, caching their ids on the connection.
     Safe to call repeatedly -- existing labels are reused, never duplicated.
-    Returns {name: id} for the four action labels."""
-    existing = _name_to_id(service)
-    ids = {}
-    for name in _REQUIRED_LABELS:
-        ids[name] = existing.get(name) or create_label(service, name)
+    Returns {name: id} for the four action labels.
 
-    conn.processed_label_id = ids[PROCESSED_LABEL]
-    conn.needs_review_label_id = ids[NEEDS_REVIEW_LABEL]
-    conn.quarantine_label_id = ids[QUARANTINE_LABEL]
-    conn.scan_failed_label_id = ids[SCAN_FAILED_LABEL]
-
+    Each label is attempted independently, and whatever succeeds is saved to
+    the connection immediately -- one label that keeps failing must not
+    throw away progress on the other four. Without this, a single
+    persistently-conflicting label meant every retry re-fought all five
+    labels from scratch instead of just the one still missing, since the
+    old version only wrote conn.*_label_id after the whole loop finished
+    without raising. Now each retry only needs to resolve whatever's left.
+    """
     from extensions import db
 
+    existing = _name_to_id(service)
+    ids = {}
+    last_error = None
+    for name in _REQUIRED_LABELS:
+        try:
+            ids[name] = existing.get(name) or create_label(service, name)
+        except GmailError as e:
+            last_error = e
+
+    if PROCESSED_LABEL in ids:
+        conn.processed_label_id = ids[PROCESSED_LABEL]
+    if NEEDS_REVIEW_LABEL in ids:
+        conn.needs_review_label_id = ids[NEEDS_REVIEW_LABEL]
+    if QUARANTINE_LABEL in ids:
+        conn.quarantine_label_id = ids[QUARANTINE_LABEL]
+    if SCAN_FAILED_LABEL in ids:
+        conn.scan_failed_label_id = ids[SCAN_FAILED_LABEL]
     db.session.commit()
+
+    if last_error is not None:
+        raise last_error
+
     return {
         "processed": conn.processed_label_id,
         "needs_review": conn.needs_review_label_id,

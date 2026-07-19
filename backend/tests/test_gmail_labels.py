@@ -67,10 +67,10 @@ def test_create_label_retries_on_aborted_then_succeeds(app, monkeypatch):
     # succession right after a brand-new OAuth grant.
     monkeypatch.setattr(labels.time, "sleep", lambda *_: None)
     svc = FakeGmailService()
-    svc.abort_remaining = 4  # succeeds on the 5th attempt, within the budget of 6
+    svc.abort_remaining = 2  # succeeds on the 3rd attempt, within the budget of 3
     label_id = labels.create_label(svc, "Sentinel/Quarantine")
     assert label_id
-    assert svc.create_count == 5
+    assert svc.create_count == 3
     assert any(x["name"] == "Sentinel/Quarantine" for x in svc.labels_store)
 
 
@@ -82,7 +82,7 @@ def test_create_label_gives_up_after_repeated_aborts(app, monkeypatch):
     svc.abort_remaining = 20  # never succeeds within the retry budget
     with pytest.raises(GmailRetryableError):
         labels.create_label(svc, "Sentinel/Quarantine")
-    assert svc.create_count == 6  # max_attempts, then gives up
+    assert svc.create_count == 3  # max_attempts, then gives up
 
 
 def test_create_label_reuses_existing_even_when_reported_as_aborted(app, monkeypatch):
@@ -101,3 +101,41 @@ def test_create_label_reuses_existing_even_when_reported_as_aborted(app, monkeyp
     svc.create_conflict_reason = "aborted"
     assert labels.create_label(svc, "Sentinel/Quarantine") == "LBL-existing"
     assert svc.create_count == 1  # found on the first re-read, no retry loop needed
+
+
+def test_ensure_labels_saves_partial_progress_when_one_keeps_failing(app, monkeypatch):
+    # The gap this guards against: one persistently-failing label used to
+    # discard the other four successes every single call, since the old
+    # code only wrote conn.*_label_id after the whole loop finished without
+    # raising. A demo can't afford re-fighting all five labels from scratch
+    # on every retry -- this proves whatever succeeds gets saved immediately,
+    # so a retry only has to resolve whatever's still missing.
+    monkeypatch.setattr(labels.time, "sleep", lambda *_: None)
+    cid = _conn(app)
+    svc = FakeGmailService()
+    svc.fail_label_names = {labels.SCAN_FAILED_LABEL}
+
+    with app.app_context():
+        conn = db.session.get(GmailConnection, cid)
+        from integrations.gmail.exceptions import GmailRetryableError
+
+        with pytest.raises(GmailRetryableError):
+            labels.ensure_sentinel_labels(svc, conn)
+
+        conn = db.session.get(GmailConnection, cid)
+        # The three labels that didn't fail are saved despite the overall
+        # call raising.
+        assert conn.processed_label_id
+        assert conn.needs_review_label_id
+        assert conn.quarantine_label_id
+        # The one that kept failing is (correctly) still unset.
+        assert conn.scan_failed_label_id is None
+
+        # A retry only needs to resolve the one still-missing label --
+        # the other four are found via list(), not re-created.
+        create_count_before_retry = svc.create_count
+        svc.fail_label_names = set()  # simulate the transient issue clearing
+        ids = labels.ensure_sentinel_labels(svc, conn)
+        assert ids["scan_failed"]
+        # Only the previously-missing label triggered a new create() call.
+        assert svc.create_count == create_count_before_retry + 1

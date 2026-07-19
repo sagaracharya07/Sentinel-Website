@@ -132,6 +132,8 @@ class _LabelsApi:
         def do():
             self.s.create_count += 1
             name = body["name"]
+            if name in self.s.fail_label_names:
+                raise make_http_error(409, "aborted", "concurrent modification")
             if self.s.abort_remaining > 0:
                 self.s.abort_remaining -= 1
                 raise make_http_error(409, "aborted", "concurrent modification")
@@ -224,6 +226,7 @@ class FakeGmailService:
         self.force_create_conflict = False
         self.create_conflict_reason = "alreadyExists"  # Gmail doesn't always say this
         self.abort_remaining = 0  # next N label creates raise 409 "aborted"
+        self.fail_label_names = set()  # these specific names always 409 "aborted"
         self.get_raises = {}  # message_id -> exception to raise on get()
         self.modify_calls = []
         self.create_count = 0
